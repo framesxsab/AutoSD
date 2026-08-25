@@ -4,6 +4,16 @@ import { createLiveRegion } from "../accessibility/a11y.js";
 
 export type SyncStatus = "Idle" | "Indexing" | "Updated" | "Error";
 
+/**
+ * v0.9 additive: structured error event from the ingest/save cycle.
+ * `error` is raw — UI layers must sanitize (sanitizeError()) before display.
+ */
+export type SyncErrorEvent = {
+  scope: "live-sync";
+  operation: "ingest" | "save";
+  error: unknown;
+};
+
 export class LiveSync {
   private watcher: CorpusWatcher;
   private status: SyncStatus = "Idle";
@@ -11,6 +21,8 @@ export class LiveSync {
   private liveEl?: HTMLElement;
   private pending = false;
   private statusListeners = new Set<(s: SyncStatus) => void>();
+  private errorListeners = new Set<(e: SyncErrorEvent) => void>();
+  private lastErrorEvent: SyncErrorEvent | null = null;
 
   constructor(
     private workflow: ResearchWorkflow,
@@ -40,9 +52,32 @@ export class LiveSync {
     return this.watcher.isRunning();
   }
 
+  /** True while an ingest cycle is in flight (additive, v0.9 diagnostics). */
+  isPending(): boolean {
+    return this.pending;
+  }
+
   onStatusChange(fn: (s: SyncStatus) => void): () => void {
     this.statusListeners.add(fn);
     return () => this.statusListeners.delete(fn);
+  }
+
+  /** Subscribe to ingest/save failures; returns an unsubscribe function. */
+  onError(fn: (e: SyncErrorEvent) => void): () => void {
+    this.errorListeners.add(fn);
+    return () => {
+      this.errorListeners.delete(fn);
+    };
+  }
+
+  getLastError(): SyncErrorEvent | null {
+    return this.lastErrorEvent;
+  }
+
+  /** Recovery path after an Error status: full rescan + re-ingest cycle. */
+  async rescan(): Promise<void> {
+    const ev = await this.watcher.trigger();
+    await this.handleChange(ev);
   }
 
   mountStatusIndicator(parent: HTMLElement): HTMLElement {
@@ -93,6 +128,7 @@ export class LiveSync {
     if (!hasWork) return;
     this.pending = true;
     this.setStatus("Indexing");
+    let phase: SyncErrorEvent["operation"] = "ingest";
     try {
       const docs = [...ev.added, ...ev.modified];
       if (docs.length > 0) {
@@ -103,12 +139,19 @@ export class LiveSync {
         this.workflow.clear();
         if (remaining.length > 0) await this.workflow.ingest(remaining);
       }
+      phase = "save";
       await this.workflow.saveToDisk(
         this.dir.replace(/\/docs$/, "").replace(/\/$/, "") || "corpus",
       );
       this.setStatus("Updated");
       setTimeout(() => this.setStatus("Idle"), 1200);
-    } catch {
+    } catch (err) {
+      this.lastErrorEvent = { scope: "live-sync", operation: phase, error: err };
+      for (const fn of this.errorListeners) {
+        try {
+          fn(this.lastErrorEvent);
+        } catch {}
+      }
       this.setStatus("Error");
       setTimeout(() => this.setStatus("Idle"), 2000);
     } finally {

@@ -12,14 +12,63 @@ export type DeviceManagerEvents = {
   activeChanged: { previous: string | null; current: string | null };
 };
 
+/**
+ * v0.9 additive: structured error event (render isolation, setActive guard).
+ * `error` is raw — UI layers must sanitize (sanitizeError()) before display.
+ */
+export type DeviceErrorEvent = {
+  scope: "device-manager";
+  operation: "render" | "setActive";
+  deviceId?: string;
+  error: unknown;
+};
+
 export class DeviceManager {
   readonly registry = new Registry<Device>();
   readonly di: DIContainer;
   private activeId: string | null = null;
   private listeners = new Map<string, Set<(p: unknown) => void>>();
+  private errorListeners = new Set<(e: DeviceErrorEvent) => void>();
+  private lastErrorEvent: DeviceErrorEvent | null = null;
 
   constructor(di?: DIContainer) {
     this.di = di ?? new DIContainer();
+  }
+
+  /** Subscribe to render/setActive failures; returns an unsubscribe function. */
+  onError(fn: (e: DeviceErrorEvent) => void): () => void {
+    this.errorListeners.add(fn);
+    return () => {
+      this.errorListeners.delete(fn);
+    };
+  }
+
+  getLastError(): DeviceErrorEvent | null {
+    return this.lastErrorEvent;
+  }
+
+  private recordError(event: DeviceErrorEvent): void {
+    this.lastErrorEvent = event;
+    for (const fn of this.errorListeners) {
+      try {
+        fn(event);
+      } catch {}
+    }
+  }
+
+  /** Non-throwing setActive variant: returns false for unknown ids. */
+  trySetActive(id: string): boolean {
+    if (!this.registry.has(id)) {
+      this.recordError({
+        scope: "device-manager",
+        operation: "setActive",
+        deviceId: id,
+        error: new Error(`DeviceManager: unknown device "${id}"`),
+      });
+      return false;
+    }
+    this.setActive(id);
+    return true;
   }
 
   register(device: Device): void {
@@ -75,6 +124,12 @@ export class DeviceManager {
       } catch (err) {
         // per-device error isolation; continue broadcast
         console.warn(`[DeviceManager] render failed for ${entry.id}:`, err);
+        this.recordError({
+          scope: "device-manager",
+          operation: "render",
+          deviceId: entry.id,
+          error: err,
+        });
       }
     }
   }

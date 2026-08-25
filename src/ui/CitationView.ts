@@ -1,13 +1,18 @@
 import type { ResearchCitation, ResearchResult } from "../workflows/research.js";
 import { auditFocusOrder, auditTargetSize, createLiveRegion } from "../accessibility/a11y.js";
+import { escapeHtml } from "../utils/sanitize.js";
 
 export type CitationOpenHandler = (citation: ResearchCitation) => void;
 
 export function renderCitation(c: ResearchCitation, confidence: number): string {
   const pct = Math.round(confidence * 100);
+  // Security: every interpolated value is escaped — ids may come from
+  // untrusted filenames and must not be able to break out of attributes.
+  const chunkId = escapeHtml(c.chunkId);
+  const documentId = escapeHtml(c.documentId);
   return (
-    `<li role="listitem" tabindex="0" data-chunk="${c.chunkId}" data-doc="${c.documentId}" aria-label="Citation ${c.chunkId} from ${c.documentId} confidence ${pct} percent">` +
-    `<strong>${c.documentId}</strong> <code>${c.chunkId}</code> ` +
+    `<li role="listitem" tabindex="0" data-chunk="${chunkId}" data-doc="${documentId}" aria-label="Citation ${chunkId} from ${documentId} confidence ${pct} percent">` +
+    `<strong>${documentId}</strong> <code>${chunkId}</code> ` +
     `<span aria-label="confidence ${pct} percent">${pct}%</span>` +
     `<p>${escapeHtml(c.content)}</p>` +
     `</li>`
@@ -16,9 +21,10 @@ export function renderCitation(c: ResearchCitation, confidence: number): string 
 
 export function renderCitations(result: ResearchResult, _onOpen?: CitationOpenHandler): string {
   const items = result.citations.map(c => renderCitation(c, result.confidence)).join("");
+  const pct = Math.round(result.confidence * 100);
   return (
     `<section aria-label="Grounded citations" role="region">` +
-    `<h3>Citations — confidence ${Math.round(result.confidence * 100)}%</h3>` +
+    `<h3>Citations — confidence ${pct}%</h3>` +
     `<ol role="list">${items}</ol>` +
     `</section>`
   );
@@ -99,12 +105,4 @@ export function createCitationList(
 
   section.appendChild(list);
   return section;
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }

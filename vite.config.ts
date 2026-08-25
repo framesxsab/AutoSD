@@ -1,7 +1,17 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import { readFileSync } from "node:fs";
+
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+  version: string;
+};
 
 export default defineConfig({
+  // Non-secret build-time constants only. Secrets must never go through
+  // `define` or VITE_ vars — they would be embedded into the client bundle.
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
     port: 5173,
     strictPort: true,
@@ -13,6 +23,7 @@ export default defineConfig({
   build: {
     outDir: "dist-app",
     emptyOutDir: true,
+    sourcemap: false,
   },
   resolve: {
     alias: [

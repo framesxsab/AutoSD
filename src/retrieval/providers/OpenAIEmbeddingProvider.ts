@@ -1,8 +1,13 @@
 import type { EmbeddingProvider } from "../embedder.js";
+import { truncate } from "../../utils/sanitize.js";
 
 /**
  * OpenAIEmbeddingProvider — calls OpenAI embeddings API when key present.
  * Falls back to error if no key; pipeline should DI-swap to Mock/Local.
+ *
+ * Security: the API key is accepted only via constructor/process env, is never
+ * logged, and provider error messages never include raw response bodies
+ * (truncated + stripped of anything resembling key material).
  */
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   readonly id = "openai";
@@ -42,8 +47,12 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
       body: JSON.stringify({ model: this.model, input: texts }),
     });
     if (!resp.ok) {
-      const body = await resp.text().catch(() => "");
-      throw new Error(`OpenAI embeddings failed ${resp.status}: ${body}`);
+      // Sanitize: status code only + truncated body with key-like strings stripped.
+      const body = (await resp.text().catch(() => "")).replace(
+        /\bsk-[A-Za-z0-9_-]{8,}\b/g,
+        "[REDACTED]",
+      );
+      throw new Error(`OpenAI embeddings failed ${resp.status}: ${truncate(body, 300)}`);
     }
     const json = (await resp.json()) as { data: { embedding: number[] }[] };
     return json.data.map(d => d.embedding);

@@ -1,7 +1,8 @@
 import { ReaderWorkflow, type ReaderDocument } from "../workflows/reader.js";
 import { createCitationList } from "./CitationView.js";
 import type { ResearchResult, ResearchCitation } from "../workflows/research.js";
-import { createLiveRegion } from "../accessibility/a11y.js";
+import { createLiveRegion, prefersReducedMotion } from "../accessibility/a11y.js";
+import { escapeSelector } from "../utils/sanitize.js";
 
 export type ReaderViewOptions = {
   charsPerPage?: number;
@@ -94,9 +95,14 @@ export class ReaderView {
       const citationSection = createCitationList(result, cit => {
         this.highlight(cit.chunkId);
         this.opts.onCitationOpen?.(cit);
-        const target = pageList.querySelector<HTMLElement>(`[data-cited="${cit.chunkId}"]`);
+        const target = pageList.querySelector<HTMLElement>(
+          `[data-cited="${escapeSelector(cit.chunkId)}"]`,
+        );
         if (target && typeof target.scrollIntoView === "function")
-          target.scrollIntoView({ behavior: "smooth", block: "center" });
+          target.scrollIntoView({
+            behavior: prefersReducedMotion() ? "auto" : "smooth",
+            block: "center",
+          });
         target?.focus();
       });
       this.container.appendChild(citationSection);
@@ -141,7 +147,9 @@ export class ReaderView {
     const target = ids[next];
     if (target) {
       this.highlight(target);
-      const el = this.container.querySelector<HTMLElement>(`[data-chunk="${target}"]`);
+      const el = this.container.querySelector<HTMLElement>(
+        `[data-chunk="${escapeSelector(target)}"]`,
+      );
       el?.focus();
     }
   }

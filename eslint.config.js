@@ -6,7 +6,7 @@ export default [
     ignores: ["dist/**", "node_modules/**", ".codegraph/**", ".omo/**", "coverage/**"]
   },
   {
-    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}"],
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}", "vite.config.ts", "vitest.config.ts"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

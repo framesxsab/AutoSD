@@ -4,6 +4,10 @@ import { VirtualList } from "../ui/VirtualList.js";
 import type { RetrievalResult } from "../retrieval/types.js";
 import { createLiveRegion } from "../accessibility/a11y.js";
 import type { LiveSync, SyncStatus } from "./LiveSync.js";
+import { DiagnosticsPanel } from "../ui/DiagnosticsPanel.js";
+import type { DiagnosticsInput } from "./diagnostics.js";
+import { LoadingIndicator } from "../ui/LoadingStates.js";
+import { classifyError, createEmptyState, ErrorStateView } from "../ui/ErrorStates.js";
 
 export type WorkspaceOptions = {
   corpusDir?: string;
@@ -19,6 +23,9 @@ export class Workspace {
   private liveSync?: LiveSync;
   private unsubscribeLiveSync?: () => void;
   private corpusStatus?: HTMLElement;
+  private diagnosticsPanel?: DiagnosticsPanel;
+  private searchLoading?: LoadingIndicator;
+  private searchErrorView?: ErrorStateView;
 
   constructor(
     private workflow: ResearchWorkflow,
@@ -47,6 +54,16 @@ export class Workspace {
     this.unsubscribeLiveSync = sync.onStatusChange(status => this.handleSyncStatus(status));
   }
 
+  attachDiagnostics(input: DiagnosticsInput = {}): HTMLElement {
+    if (this.diagnosticsPanel) this.diagnosticsPanel.unmount();
+    const sec = document.createElement("section");
+    sec.setAttribute("aria-label", "Diagnostics");
+    this.diagnosticsPanel = new DiagnosticsPanel({ input });
+    this.diagnosticsPanel.mount(sec);
+    this.container.appendChild(sec);
+    return sec;
+  }
+
   detachLiveSync(): void {
     if (this.unsubscribeLiveSync) {
       this.unsubscribeLiveSync();
@@ -57,6 +74,8 @@ export class Workspace {
 
   unmount(): void {
     this.detachLiveSync();
+    this.diagnosticsPanel?.unmount();
+    this.diagnosticsPanel = undefined;
     this.container.remove();
   }
 
@@ -106,11 +125,21 @@ export class Workspace {
       itemHeight: 72,
       containerHeight: 240,
       renderItem: r => {
+        // Security: corpus content/ids are untrusted — build with DOM APIs
+        // (textContent), never innerHTML string interpolation.
         const el = document.createElement("div");
         el.setAttribute("role", "listitem");
         el.tabIndex = 0;
         el.dataset.chunk = r.chunk.id;
-        el.innerHTML = `<strong>${r.chunk.documentId}</strong> <code>${r.chunk.id}</code> <span>${Math.round(r.score * 100) / 100}</span><p>${r.chunk.content.slice(0, 120)}</p>`;
+        const strong = document.createElement("strong");
+        strong.textContent = r.chunk.documentId;
+        const code = document.createElement("code");
+        code.textContent = r.chunk.id;
+        const score = document.createElement("span");
+        score.textContent = String(Math.round(r.score * 100) / 100);
+        const preview = document.createElement("p");
+        preview.textContent = r.chunk.content.slice(0, 120);
+        el.append(strong, " ", code, " ", score, preview);
         el.addEventListener("click", () => this.inspect(r));
         el.addEventListener("keydown", e => {
           if (e.key === "Enter") this.inspect(r);
@@ -186,9 +215,40 @@ export class Workspace {
 
   private async doSearch(query: string): Promise<void> {
     if (!query.trim()) return;
-    const res = await this.workflow.run({ id: `search-${Date.now()}`, question: query });
+    this.clearSearchFeedback();
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const chunksSection = this.container.querySelector<HTMLElement>(
+      'section[aria-label="Retrieved chunks"]',
+    );
+    this.searchLoading = new LoadingIndicator({
+      label: "Searching corpus",
+      message: `Searching for ${query}…`,
+    });
+    this.searchLoading.mount(chunksSection ?? this.container);
+
+    const result = await this.workflow.runSafe({ id: `search-${Date.now()}`, question: query });
+
+    this.searchLoading.unmount();
+    this.searchLoading = undefined;
+
+    if (!result) {
+      const lastErr = this.workflow.getLastError();
+      const classified = classifyError(lastErr?.error ?? new Error("Search failed"));
+      const view = new ErrorStateView({
+        kind: classified.kind,
+        title: classified.title,
+        detail: classified.detail || classified.title,
+        returnFocusTo: trigger,
+        onRetry: () => this.doSearch(query),
+      });
+      view.mount(chunksSection ?? this.container);
+      this.searchErrorView = view;
+      return;
+    }
+
     // Feed retrieved chunks into virtual list lazily
-    const results: RetrievalResult[] = res.citations.map(c => ({
+    const results: RetrievalResult[] = result.citations.map(c => ({
       chunk: {
         id: c.chunkId,
         documentId: c.documentId,
@@ -210,14 +270,50 @@ export class Workspace {
       }
       this.chunksList.setItems(results);
     }
+
+    if (this.workflow.listDocuments().length === 0 && chunksSection) {
+      const empty = createEmptyState({
+        message: "No documents indexed yet.",
+        hint: "Add .md or .txt files to your corpus folder — AutoSD watches it and indexes automatically.",
+        ctaLabel: "Open corpus folder help",
+        onCta: () => {
+          const corpusSec = this.container.querySelector<HTMLElement>(
+            'section[aria-label="Corpus manager"]',
+          );
+          corpusSec?.focus();
+          this.announce("Corpus section focused");
+        },
+      });
+      empty.dataset.autosdFeedback = "true";
+      chunksSection.appendChild(empty);
+    }
+
     this.announce(`Found ${results.length} results for ${query}`);
     // Refresh session browser to show new session
     this.sessionBrowser.render();
   }
 
+  private clearSearchFeedback(): void {
+    this.searchLoading?.unmount();
+    this.searchLoading = undefined;
+    this.searchErrorView?.clear(false);
+    this.searchErrorView = undefined;
+    for (const el of Array.from(this.container.querySelectorAll('[data-autosd-feedback="true"]'))) {
+      el.remove();
+    }
+  }
+
   private inspect(r: RetrievalResult): void {
     if (!this.inspector) return;
-    this.inspector.innerHTML = `<h4>${r.chunk.documentId} — ${r.chunk.id}</h4><p>Score ${Math.round(r.score * 100) / 100} · Source ${r.source}</p><pre>${r.chunk.content}</pre>`;
+    // Security: untrusted corpus data — DOM APIs only, no innerHTML.
+    this.inspector.textContent = "";
+    const heading = document.createElement("h4");
+    heading.textContent = `${r.chunk.documentId} — ${r.chunk.id}`;
+    const meta = document.createElement("p");
+    meta.textContent = `Score ${Math.round(r.score * 100) / 100} · Source ${r.source}`;
+    const pre = document.createElement("pre");
+    pre.textContent = r.chunk.content;
+    this.inspector.append(heading, meta, pre);
     this.inspector.focus();
   }
 

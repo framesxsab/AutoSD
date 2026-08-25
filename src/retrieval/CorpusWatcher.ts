@@ -14,17 +14,51 @@ export type WatcherOptions = {
   ignoreDotfiles?: boolean;
 };
 
+/**
+ * v0.9 additive: structured error event. `error` is raw — UI layers must
+ * sanitize (sanitizeError()) before display.
+ */
+export type WatcherErrorEvent = {
+  scope: "corpus-watcher";
+  operation: "scan" | "read" | "onChange";
+  path?: string;
+  error: unknown;
+};
+
 export class CorpusWatcher {
   private watcher?: FSWatcher;
   private debounceTimer?: ReturnType<typeof setTimeout>;
   private fileHashes = new Map<string, string>();
   private running = false;
+  private errorListeners = new Set<(e: WatcherErrorEvent) => void>();
+  private lastErrorEvent: WatcherErrorEvent | null = null;
 
   constructor(
     private dir: string,
     private onChange: (event: WatcherEvent) => Promise<void> | void,
     private opts: WatcherOptions = {},
   ) {}
+
+  /** Subscribe to scan/read/onChange failures; returns an unsubscribe function. */
+  onError(fn: (e: WatcherErrorEvent) => void): () => void {
+    this.errorListeners.add(fn);
+    return () => {
+      this.errorListeners.delete(fn);
+    };
+  }
+
+  getLastError(): WatcherErrorEvent | null {
+    return this.lastErrorEvent;
+  }
+
+  private recordError(event: WatcherErrorEvent): void {
+    this.lastErrorEvent = event;
+    for (const fn of this.errorListeners) {
+      try {
+        fn(event);
+      } catch {}
+    }
+  }
 
   async start(): Promise<void> {
     if (this.running) return;
@@ -63,7 +97,10 @@ export class CorpusWatcher {
             return this.onChange(ev);
           }
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          // Keep the watcher loop alive; surface the failure to listeners.
+          this.recordError({ scope: "corpus-watcher", operation: "onChange", error: err });
+        });
     }, ms);
   }
 
@@ -79,7 +116,9 @@ export class CorpusWatcher {
     try {
       const { readdir } = await import("node:fs/promises");
       entries = await readdir(this.dir);
-    } catch {
+    } catch (err) {
+      // Graceful-empty contract preserved; failure now surfaced to listeners.
+      this.recordError({ scope: "corpus-watcher", operation: "scan", path: this.dir, error: err });
       return { added: [], modified: [], deleted: [] };
     }
 
@@ -108,7 +147,9 @@ export class CorpusWatcher {
         } else if (prev !== hash) {
           modified.push({ id, content, path: full, metadata: { hash } });
         }
-      } catch {}
+      } catch (err) {
+        this.recordError({ scope: "corpus-watcher", operation: "read", path: full, error: err });
+      }
     }
 
     const deleted: string[] = [];

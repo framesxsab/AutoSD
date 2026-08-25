@@ -51,12 +51,26 @@ export type RetrievalSessionResult = {
 export const EMBEDDING_TOKEN = "embedding:provider";
 export const MAX_SESSIONS = 100;
 
+/**
+ * v0.9 additive: structured error event surfaced by runSafe()/retryLastQuery().
+ * `error` is the raw thrown value — UI layers MUST sanitize it (e.g.
+ * sanitizeError() from app/logger) before displaying; never render it raw.
+ */
+export type ResearchErrorEvent = {
+  scope: "research";
+  operation: "run";
+  error: unknown;
+};
+
 export class ResearchWorkflow {
   private pipeline: RetrievalPipeline;
   private snapshot = new SnapshotIndex();
   private di: DIContainer;
   private history: ResearchSession[] = [];
   private documents: Map<string, Document> = new Map();
+  private errorListeners = new Set<(e: ResearchErrorEvent) => void>();
+  private lastErrorEvent: ResearchErrorEvent | null = null;
+  private lastQuery: ResearchQuery | null = null;
 
   constructor(opts?: {
     provider?: EmbeddingProvider;
@@ -255,5 +269,53 @@ export class ResearchWorkflow {
     if (idx === -1) return false;
     this.history.splice(idx, 1);
     return true;
+  }
+
+  // v0.9 additive: error surfacing & recovery (no existing API changed)
+
+  /** Subscribe to errors from runSafe(); returns an unsubscribe function. */
+  onError(fn: (e: ResearchErrorEvent) => void): () => void {
+    this.errorListeners.add(fn);
+    return () => {
+      this.errorListeners.delete(fn);
+    };
+  }
+
+  getLastError(): ResearchErrorEvent | null {
+    return this.lastErrorEvent;
+  }
+
+  clearError(): void {
+    this.lastErrorEvent = null;
+  }
+
+  /**
+   * Non-throwing variant of run(): resolves null on failure after notifying
+   * onError listeners. UI layers turn the failure into an ErrorStateView whose
+   * retry handler calls retryLastQuery().
+   */
+  async runSafe(query: ResearchQuery): Promise<ResearchResult | null> {
+    this.lastQuery = query;
+    try {
+      return await this.run(query);
+    } catch (error) {
+      this.lastErrorEvent = { scope: "research", operation: "run", error };
+      for (const fn of this.errorListeners) {
+        try {
+          fn(this.lastErrorEvent);
+        } catch {}
+      }
+      return null;
+    }
+  }
+
+  hasRecoverableQuery(): boolean {
+    return this.lastQuery !== null;
+  }
+
+  /** Recovery path: re-invokes the last attempted query through runSafe(). */
+  async retryLastQuery(): Promise<ResearchResult | null> {
+    if (!this.lastQuery) return null;
+    return this.runSafe(this.lastQuery);
   }
 }

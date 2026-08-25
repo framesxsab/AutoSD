@@ -1,0 +1,33 @@
+# --- VCS / metadata ---
+.git
+.gitignore
+.github
+.codegraph
+.omo
+
+# --- Dependencies & build outputs (rebuilt inside the image) ---
+node_modules
+dist
+dist-app
+coverage
+
+# --- Secrets: NEVER enter the Docker build context ---
+.env
+.env.*
+!.env.example
+
+# --- Local corpus & artifacts not needed in the image ---
+corpus
+*.log
+lighthouse*.json
+researcher-round3.md
+prior-art-report.md
+
+# --- Docs & IDE ---
+docs
+*.md
+!README.md
+.vscode
+.idea
+Thumbs.db
+.DS_Store

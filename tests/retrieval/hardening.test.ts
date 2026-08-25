@@ -60,6 +60,11 @@ describe("T06.5 hardening — uncovered branches", () => {
         c => c.content.trim().length >= 20 || c.end === ("   \n   \n" + "a".repeat(50)).length,
       ),
     ).toBe(true);
+    const noFilter = chunkDocument(
+      { id: "d1", content: "hello world test" },
+      { chunkSize: 5, overlap: 1 },
+    );
+    expect(noFilter.length).toBeGreaterThan(0);
     const lastShort = chunkDocument(
       { id: "d1", content: "abcdefghij".repeat(3) + "xy" },
       { chunkSize: 10, overlap: 2, minChunkSize: 20 },
