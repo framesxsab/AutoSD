@@ -1,0 +1,15 @@
+# CodeGraph data files — local to each machine, not for committing.
+.codegraph/*
+!.codegraph/.gitignore
+.omo/run-continuation/*
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+
+# Corpus snapshots (generated)
+corpus/snapshots/*/chunks.jsonl
