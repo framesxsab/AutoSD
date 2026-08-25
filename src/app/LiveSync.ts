@@ -80,6 +80,11 @@ export class LiveSync {
       const msg = createLiveRegion(`Corpus ${next.toLowerCase()}`);
       this.liveEl.textContent = msg.message;
     }
+    for (const fn of this.statusListeners) {
+      try {
+        fn(next);
+      } catch {}
+    }
   }
 
   private async handleChange(ev: WatcherEvent): Promise<void> {

@@ -49,6 +49,7 @@ export type RetrievalSessionResult = {
 };
 
 export const EMBEDDING_TOKEN = "embedding:provider";
+export const MAX_SESSIONS = 100;
 
 export class ResearchWorkflow {
   private pipeline: RetrievalPipeline;
@@ -155,7 +156,7 @@ export class ResearchWorkflow {
     }
 
     const session: ResearchSession = {
-      id: `sess-${Date.now()}-${query.id}`,
+      id: `sess-${Date.now()}-${query.id}-${Math.random().toString(36).slice(2, 7)}`,
       query,
       results: result,
       manifest: {
@@ -172,6 +173,10 @@ export class ResearchWorkflow {
       createdAt: new Date().toISOString(),
     };
     this.history.push(session);
+    if (this.history.length > MAX_SESSIONS) {
+      this.history.splice(0, this.history.length - MAX_SESSIONS);
+    }
+    this.history.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     return result;
   }
 
@@ -235,7 +240,12 @@ export class ResearchWorkflow {
       const { readFile } = await import("node:fs/promises");
       const raw = await readFile(`${dir}/sessions.json`, "utf8");
       const parsed = JSON.parse(raw) as ResearchSession[];
-      if (Array.isArray(parsed)) this.history = parsed;
+      if (Array.isArray(parsed)) {
+        const valid = parsed.filter(s => s && typeof s.id === "string" && s.query && s.results);
+        valid.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        if (valid.length > MAX_SESSIONS) valid.splice(0, valid.length - MAX_SESSIONS);
+        this.history = valid;
+      }
     } catch {}
     return true;
   }

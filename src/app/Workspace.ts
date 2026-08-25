@@ -3,6 +3,7 @@ import { SessionBrowser } from "../ui/SessionBrowser.js";
 import { VirtualList } from "../ui/VirtualList.js";
 import type { RetrievalResult } from "../retrieval/types.js";
 import { createLiveRegion } from "../accessibility/a11y.js";
+import type { LiveSync, SyncStatus } from "./LiveSync.js";
 
 export type WorkspaceOptions = {
   corpusDir?: string;
@@ -15,6 +16,9 @@ export class Workspace {
   private chunksList?: VirtualList<RetrievalResult>;
   private inspector?: HTMLElement;
   private exportHistory: string[] = [];
+  private liveSync?: LiveSync;
+  private unsubscribeLiveSync?: () => void;
+  private corpusStatus?: HTMLElement;
 
   constructor(
     private workflow: ResearchWorkflow,
@@ -37,8 +41,44 @@ export class Workspace {
     this.lazyLoad();
   }
 
+  attachLiveSync(sync: LiveSync): void {
+    if (this.unsubscribeLiveSync) this.unsubscribeLiveSync();
+    this.liveSync = sync;
+    this.unsubscribeLiveSync = sync.onStatusChange(status => this.handleSyncStatus(status));
+  }
+
+  detachLiveSync(): void {
+    if (this.unsubscribeLiveSync) {
+      this.unsubscribeLiveSync();
+      this.unsubscribeLiveSync = undefined;
+      this.liveSync = undefined;
+    }
+  }
+
+  unmount(): void {
+    this.detachLiveSync();
+    this.container.remove();
+  }
+
   getElement(): HTMLElement {
     return this.container;
+  }
+
+  private handleSyncStatus(status: SyncStatus): void {
+    if (status === "Updated") {
+      queueMicrotask(() => {
+        const corpusSec = this.container.querySelector('section[aria-label="Corpus manager"]');
+        if (corpusSec) {
+          const newMgr = this.renderCorpusManager();
+          corpusSec.replaceWith(newMgr);
+        }
+        this.announce("Corpus updated — retrieval index refreshed");
+      });
+    } else if (status === "Indexing") {
+      this.announce("Indexing corpus changes");
+    } else if (status === "Error") {
+      this.announce("Corpus indexing failed");
+    }
   }
 
   private render(): void {

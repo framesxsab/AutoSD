@@ -13,6 +13,7 @@ async function mountApp(): Promise<void> {
   liveSync.mountStatusIndicator(statusHost);
 
   const workspace = new Workspace(workflow);
+  workspace.attachLiveSync(liveSync);
   workspace.mount(root);
 
   const readerHost = document.createElement("section");

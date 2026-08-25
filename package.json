@@ -1,6 +1,6 @@
 {
   "name": "autosd",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "AutoSD — plugin-first tactile/research platform with DeviceManager, registry, DI hot-swap, and WCAG 2.2 AA guarantees",
   "type": "module",
