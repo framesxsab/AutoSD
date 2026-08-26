@@ -1,8 +1,9 @@
 /**
  * Demo — deterministic, software-only showcase of the full AutoSD pipeline.
  *
- * Canonical path: ingest fixed corpus → search → citations → tactile output
- * (VirtualDevice framebuffer) → diagnostics → session export.
+ * Canonical path: ingest fixed corpus → reader pagination → search →
+ * citations → tactile output (VirtualDevice framebuffer) → diagnostics →
+ * session export.
  *
  * Guarantees:
  * - Deterministic: seeded MockEmbeddingProvider + fixed corpus + fixed query.
@@ -20,13 +21,15 @@ import { ResearchWorkflow } from "../workflows/research.js";
 import type { ResearchCitation, ResearchResult } from "../workflows/research.js";
 import { MockEmbeddingProvider } from "../retrieval/providers/MockEmbeddingProvider.js";
 import { VirtualDevice } from "../devices/VirtualDevice.js";
+import { ReaderWorkflow } from "../workflows/reader.js";
 import { textToDots } from "../workflows/tactile.js";
 import { collectDiagnostics, APP_VERSION } from "./diagnostics.js";
 import type { Document } from "../retrieval/types.js";
 import type { Device } from "../core/Device.js";
 
 export const DEMO_ID = "autosd-demo";
-export const DEMO_VERSION = 1;
+/** v2: added the deterministic reader step (reading-order pagination). */
+export const DEMO_VERSION = 2;
 export const DEMO_QUERY = "How do refreshable braille displays render braille dots?";
 
 /** Fixed demo corpus — 4 documents, each small enough for a single chunk. */
@@ -86,6 +89,7 @@ export const DEMO_CORPUS: readonly Document[] = [
 
 export const DEMO_STEPS = [
   "ingest",
+  "reader",
   "search",
   "citations",
   "tactile",
@@ -120,6 +124,8 @@ export type DemoResult = {
   readonly demoId: typeof DEMO_ID;
   readonly query: string;
   readonly corpusIds: string[];
+  /** Total pages the reader workflow produced over the fixed corpus. */
+  readonly readerPages: number;
   readonly answer: string;
   readonly confidence: number;
   readonly citations: ResearchCitation[];
@@ -153,6 +159,7 @@ function makeFreshWorkflow(provider: MockEmbeddingProvider): ResearchWorkflow {
 export function buildDemoExport(parts: {
   query: string;
   corpusIds: string[];
+  readerPages: number;
   answer: string;
   confidence: number;
   citations: ResearchCitation[];
@@ -165,6 +172,7 @@ export function buildDemoExport(parts: {
     appVersion: parts.diagnostics.version,
     query: parts.query,
     corpus: parts.corpusIds,
+    reader: { documents: parts.corpusIds.length, pages: parts.readerPages },
     answer: parts.answer,
     confidence: Math.round(parts.confidence * 1000) / 1000,
     citations: parts.citations.map(c => ({
@@ -206,6 +214,7 @@ export function formatDemoReport(result: DemoResult): string {
   lines.push(
     `Corpus: ${result.corpusIds.length} documents · confidence ${Math.round(result.confidence * 100)}%`,
   );
+  lines.push(`Reader: ${result.readerPages} pages in reading order`);
   lines.push(`Answer: ${result.answer}`);
   lines.push("Citations:");
   result.citations.forEach((c, i) => {
@@ -245,17 +254,26 @@ export async function runDemo(opts: RunDemoOptions = {}): Promise<DemoResult> {
     `${corpusIds.length} documents · ${ingestInfo.chunkCount} chunks · index ${ingestInfo.manifestVersion}`,
   );
 
-  // 2. Search — hybrid BM25 + vector retrieval via the mock provider.
+  // 2. Reader — paginate the corpus into accessible reading order.
+  progress("reader", "running", `${DEMO_CORPUS.length} documents`);
+  const reader = new ReaderWorkflow();
+  const readerPages = DEMO_CORPUS.reduce(
+    (sum, d) => sum + reader.paginate({ id: d.id, title: d.id, content: d.content }).length,
+    0,
+  );
+  progress("reader", "done", `${readerPages} pages across ${DEMO_CORPUS.length} documents`);
+
+  // 3. Search — hybrid BM25 + vector retrieval via the mock provider.
   progress("search", "running", query);
   const result = await workflow.run({ id: `${DEMO_ID}-query`, question: query });
   progress("search", "done", `confidence ${Math.round(result.confidence * 100)}%`);
 
-  // 3. Citations — grounded sources ranked by the pipeline.
+  // 4. Citations — grounded sources ranked by the pipeline.
   progress("citations", "running", `${result.citations.length} candidates`);
   if (result.citations.length === 0) throw new Error("Demo: retrieval returned no citations");
   progress("citations", "done", `${result.citations.length} citations`);
 
-  // 4. Tactile output — render top citations onto the virtual framebuffer.
+  // 5. Tactile output — render top citations onto the virtual framebuffer.
   progress("tactile", "running", device.info.name);
   if (device.info.status !== "connected") await device.connect();
   const dotCount = device.info.capabilities.dotCount ?? 40;
@@ -274,7 +292,7 @@ export async function runDemo(opts: RunDemoOptions = {}): Promise<DemoResult> {
   }
   progress("tactile", "done", `${frames.length} frames on ${device.info.name}`);
 
-  // 5. Diagnostics — safe metadata-only snapshot (no secrets, no contents).
+  // 6. Diagnostics — safe metadata-only snapshot (no secrets, no contents).
   progress("diagnostics", "running");
   const report = collectDiagnostics({ workflow, provider });
   const diagnostics: DemoDiagnostics = {
@@ -296,7 +314,7 @@ export async function runDemo(opts: RunDemoOptions = {}): Promise<DemoResult> {
   };
   progress("diagnostics", "done", `provider ${diagnostics.provider.id}`);
 
-  // 6. Export — canonical deterministic session JSON.
+  // 7. Export — canonical deterministic session JSON.
   progress("export", "running");
   const sessions = workflow.listSessions();
   const sessionId = sessions[sessions.length - 1]?.id ?? "";
@@ -304,6 +322,7 @@ export async function runDemo(opts: RunDemoOptions = {}): Promise<DemoResult> {
     buildDemoExport({
       query,
       corpusIds,
+      readerPages,
       answer: result.answer,
       confidence: result.confidence,
       citations: result.citations,
@@ -319,6 +338,7 @@ export async function runDemo(opts: RunDemoOptions = {}): Promise<DemoResult> {
     demoId: DEMO_ID,
     query,
     corpusIds,
+    readerPages,
     answer: result.answer,
     confidence: result.confidence,
     citations: result.citations,

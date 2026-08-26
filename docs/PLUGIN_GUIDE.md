@@ -79,6 +79,19 @@ export class GreetPlugin implements Plugin {
 
 A fuller version with typed payloads and cleanup lives in `src/examples/ExamplePlugin.ts`. Copy it as a starting point.
 
+## The complete walkthrough (devices + diagnostics)
+
+`GreetPlugin` shows the lifecycle but never touches a device. For the full contributor arc — **interface → manifest fields → registration → VirtualDevice render → diagnostics-safe result → tests → removal** — read [`src/examples/MinimalTactilePlugin.ts`](../src/examples/MinimalTactilePlugin.ts). It registers one workflow (`minimal-tactile:render`) that renders text onto any `Device`, then returns metadata only: plugin id/version, device id/kind, dot count, active-dot count, the rendered pattern, and the framebuffer read-back.
+
+What it teaches beyond `GreetPlugin`:
+
+- **Devices are injected, not imported.** The constructor takes a `Device` (default: a fresh `VirtualDevice`); nothing in the plugin reaches for a global `DeviceManager`.
+- **Read-back semantics differ by implementation.** `VirtualDevice.render()` writes its framebuffer, so render→read round-trips. `MockDevice.read()` only reflects `write()`, so post-render read-back is `null` there — the plugin reports this honestly instead of papering over it. Know which semantics your target device provides.
+- **Results should be issue-safe.** The result contains no secrets, timestamps, or environment values; it passes through the diagnostics `sanitize()` helper unchanged (asserted in its test).
+- **Removability.** Delete `src/examples/MinimalTactilePlugin.ts` plus `tests/examples/minimal-tactile-plugin.test.ts` and nothing else changes — no core edits, no barrel exports.
+
+Its five-test suite lives at [`tests/examples/minimal-tactile-plugin.test.ts`](../tests/examples/minimal-tactile-plugin.test.ts) and doubles as executable documentation of the register → activate → run → deactivate → hot-swap path.
+
 ## Registering and running
 
 Plugins are hosted by `PluginHost`, which owns a `PluginRegistry`:
@@ -88,7 +101,7 @@ import { PluginHost } from "./src/plugins/PluginHost.js";
 import { ExamplePlugin } from "./src/examples/ExamplePlugin.js";
 
 const host = new PluginHost(); // pass a version string if you want to override the default
-await host.registry.register(new ExamplePlugin());
+host.registry.register(new ExamplePlugin());
 await host.registry.activate("example-echo");
 
 host.listWorkflows(); // ["example:echo"]
@@ -122,8 +135,9 @@ Notes:
 Follow the pattern in `tests/core/registry.test.ts`: construct a `PluginHost`, register, activate, run the workflow, assert results, then hot-swap and assert the new handler took over. Tests run under vitest in the node environment; add `/** @vitest-environment jsdom */` only if your plugin touches the DOM.
 
 ```bash
-npx vitest run tests/plugins   # once plugins tests exist for yours
-npm run verify                 # full gate before opening a PR
+npx vitest run tests/examples   # runs the MinimalTactilePlugin walkthrough suite
+npx vitest run tests/core       # registry/hot-swap lifecycle tests
+npm run verify                  # full gate before opening a PR
 ```
 
 ## Distribution status

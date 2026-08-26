@@ -1,13 +1,14 @@
 # Contributing to AutoSD
 
-Thanks for helping build AutoSD. This guide covers setup, the verification gate, and how to get a change merged. These docs describe the codebase as built at v0.8.x and set contributor expectations for v0.9.
+Thanks for helping build AutoSD. This guide covers setup, the verification gate, and how to get a change merged. These docs track the current tree (275 tests across 49 files; v1.0.0 was 219/43 — see `evaluation.baseline.json`) and set contributor expectations for the v1.x line.
 
 New here? Read in this order:
 
-1. `BOOTSTRAP.md` for a 60-second clean-clone check
-2. `docs/DEVELOPMENT.md` for day-to-day workflow
-3. `docs/ARCHITECTURE.md` for how the pieces fit
-4. The guide for your area: `docs/PLUGIN_GUIDE.md` or `docs/RESEARCH_GUIDE.md`
+1. `docs/GETTING_STARTED.md` — clone → run → verify → demo in five minutes
+2. `docs/CONTRIBUTOR_MAP.md` — find the lane that fits you
+3. `docs/DEVELOPMENT.md` for day-to-day workflow
+4. `docs/ARCHITECTURE.md` for how the pieces fit
+5. The guide for your area: `docs/PLUGIN_GUIDE.md`, `docs/RESEARCH_GUIDE.md`, or `docs/HARDWARE_INTEGRATION.md`
 
 ## Requirements
 
@@ -57,15 +58,40 @@ This builds the app, serves `dist-app/` on `127.0.0.1:4173`, waits for HTTP read
 
 You do not need to run it for every change; CI always does. Run it locally when your change touches UI, routing, styling, or anything else Lighthouse can see. Details in `docs/DEVELOPMENT.md` ("Fast vs release verification").
 
+## Evaluation duties
+
+Every PR that touches retrieval, devices, app bootstrap, or the evaluation engine should include a fresh evaluation:
+
+```bash
+npm run evaluate
+node scripts/run-evaluation.mjs --validate evaluation-output/evaluation.json
+```
+
+If a task fails:
+
+1. Read its row in `docs/EVALUATION_TASKS.md` for the expected result and failure interpretation.
+2. Reproduce with `npm run demo` + `npm test` for focused area.
+3. Attach only the three safe files (`evaluation.json`, `evaluation.md`, `environment.json`) — never secrets, paths, or document contents.
+4. Open an issue via the **Evaluation report** template (its fields cover environment, task ID, expected/actual, steps, artifact, hardware).
+5. Optionally submit the fix as a PR; keep the issue link.
+
+External reports never auto-merge into README or release claims — maintainers triage them first (see `docs/EVALUATION_SCHEMA.md` provenance rules).
+
 ## Finding work
 
-Check the issue tracker for open issues. Useful labels when filing or picking up work:
+Check the issue tracker for open issues. Label taxonomy for evaluation reports:
 
+- `evaluation`: any `npm run evaluate` result (pass or fail — negative results are welcome)
 - `bug`: something is broken as described
 - `feature`: new capability, additive by preference
-- `docs`: documentation only
-- `a11y`: accessibility gaps, treated as defects
+- `docs` / `documentation`: documentation only
+- `a11y` / `accessibility`: accessibility gaps, treated as defects
+- `hardware`: physical device sessions or compatibility
+- `research`: retrieval quality, benchmarks, methodology
+- `security`: use `SECURITY.md` privately, never a public issue
 - `rfc`: changes that touch a public contract (`Device`, `Plugin`, `EmbeddingProvider`, exported types)
+
+Triage without a conversation: the **Evaluation report** template provides environment, version, task ID, expected/actual, steps, artifact, and hardware fields — enough to apply the right label. Hardware info present → `hardware`; screen-reader mention → `accessibility`; retrieval/citation → `research`; schema violation output → bounce with `node scripts/run-evaluation.mjs --validate` guidance; security hint → close and redirect to `SECURITY.md`.
 
 Contract changes always start as an RFC issue before code. See "Additive-only rule" below.
 
@@ -100,6 +126,7 @@ Contract changes always start as an RFC issue before code. See "Additive-only ru
 ### PR checklist
 
 - [ ] `npm run verify` passes locally
+- [ ] If retrieval/devices/app bootstrap or evaluation could be affected: `npm run evaluate` passes and artifacts are privacy-clean (see `docs/INDEPENDENT_EVALUATION.md`)
 - [ ] UI-affecting changes: `npm run verify:release` passes locally (CI's Lighthouse job runs it regardless)
 - [ ] Tests cover the new behavior or the fixed bug
 - [ ] No public contract field was removed or renamed

@@ -1,0 +1,121 @@
+name: Evaluation report
+description: Report results (passing or failing) from running the AutoSD evaluation
+title: "evaluation: <os / app version / one-line outcome>"
+labels: ["evaluation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for evaluating AutoSD. Partial runs and negative results are welcome.
+        Attach `evaluation.json` / `evaluation.md` / `environment.json` from
+        `npm run evaluate` — nothing else is needed, and no personal data should be included.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Evaluation kind
+      description: What produced this report? (See docs/EVALUATION_SCHEMA.md for definitions.)
+      options:
+        - AUTOMATED (npm run evaluate output)
+        - MANUAL (checklist/browser walkthrough)
+        - HARDWARE-VALIDATED (documented device session)
+        - USER-VALIDATED (participant study with methodology)
+
+  - type: dropdown
+    id: provenance
+    attributes:
+      label: Provenance
+      description: How was this artifact produced? External self-reported is the default for contributor submissions. Maintainer-ci is pipeline-generated.
+      options:
+        - external-self-reported (default)
+        - maintainer-ci
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: AutoSD version / commit
+      description: "From evaluation.json (appVersion) or git rev-parse HEAD"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Paste the contents of environment.json (osPlatform, osRelease, arch, nodeVersion, npmVersion) or fill in OS / Node / npm manually. This file is safe by construction — no absolute paths or secrets.
+      placeholder: '{"osPlatform":"linux","osRelease":"5.15.0","arch":"x64","nodeVersion":"v20.11.0","npmVersion":"10.2.0"}'
+    validations:
+      required: true
+
+  - type: dropdown
+    id: validation-level
+    attributes:
+      label: Strongest validation level claimed
+      description: Highest level any task in this report claims. See docs/EVALUATION_SCHEMA.md. Automated runs may only claim SOFTWARE-VERIFIED.
+      options:
+        - SOFTWARE-VERIFIED
+        - SOFTWARE-SCAFFOLDED
+        - HARDWARE-CONNECTED
+        - HARDWARE-VALIDATED
+        - USER-VALIDATED
+      default: 0
+    validations:
+      required: true
+
+  - type: input
+    id: task-ids
+    attributes:
+      label: Task ID(s)
+      description: e.g. T03-RETRIEVAL, or T02–T07 for a range
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: From docs/EVALUATION_TASKS.md or your own expectation
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Exact commands you ran, in order. Include `npm run evaluate` flags if any. For hardware, include first-contact procedure steps from docs/HARDWARE_INTEGRATION.md.
+      placeholder: "npm run bootstrap\nnpm run evaluate\nnode scripts/run-evaluation.mjs --validate evaluation-output/evaluation.json"
+    validations:
+      required: true
+
+  - type: textarea
+    id: artifact
+    attributes:
+      label: Evaluation artifact
+      description: Paste the relevant tasks[] section of evaluation.json or attach the three allowlisted files (evaluation.json, evaluation.md, environment.json). Attach only these files.
+      placeholder: '{"schema":"autosd-evaluation","schemaVersion":1,"taskSetVersion":1,...}'
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware information (optional)
+      description: Device model, transport (WebHID/node-hid), what happened. Leave empty if not tested.
+
+  - type: checkboxes
+    id: attestations
+    attributes:
+      label: Attestations
+      options:
+        - label: The attached artifacts pass their privacy scan (`privacy scan PASS`) and contain no secrets or personal data.
+          required: true
+        - label: Validation levels are labeled honestly — I have not marked software results as hardware/user validated without the evidence docs/EVALUATION_SCHEMA.md requires.
+          required: true

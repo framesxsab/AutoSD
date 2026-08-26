@@ -15,7 +15,8 @@ import { writeFile } from "node:fs/promises";
 
 const args = process.argv.slice(2);
 const outIdx = args.indexOf("--out");
-const outPath = outIdx !== -1 ? args[outIdx + 1] : null;
+// Some npm versions strip flags after `--`; fall back to a bare positional path.
+const outPath = outIdx !== -1 ? args[outIdx + 1] : (args.find(a => !a.startsWith("-")) ?? null);
 
 const server = await createServer({
   server: { middlewareMode: true },

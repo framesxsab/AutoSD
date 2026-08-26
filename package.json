@@ -20,6 +20,8 @@
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.md\"",
     "test": "vitest run --coverage=false",
     "demo": "node scripts/run-demo.mjs",
+    "evaluate": "node scripts/run-evaluation.mjs",
+    "evaluate:gate": "node scripts/check-evaluation-baseline.mjs",
     "test:watch": "vitest",
     "verify": "npm run typecheck && npm run lint && npm run format && npm run test && npm run build",
     "verify:release": "node scripts/verify-release.mjs",
@@ -32,9 +34,11 @@
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.0.0",
     "jsdom": "^29.1.1",
+    "lighthouse": "12.8.2",
     "prettier": "^3.3.3",
     "typescript": "^5.6.0",
     "vite": "^8.2.2",
-    "vitest": "^2.1.0"
+    "vitest": "^2.1.0",
+    "wait-on": "8.0.3"
   }
 }

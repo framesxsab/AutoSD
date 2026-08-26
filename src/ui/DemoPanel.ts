@@ -38,6 +38,7 @@ export type DemoPanelOptions = {
 
 const STEP_LABELS: Record<DemoStepId, string> = {
   ingest: "Ingest corpus",
+  reader: "Paginate for reading",
   search: "Search",
   citations: "Collect citations",
   tactile: "Render tactile output",
@@ -75,8 +76,9 @@ export class DemoPanel {
 
     const intro = document.createElement("p");
     intro.textContent =
-      "Runs the full pipeline end to end — corpus ingest, search, grounded citations, " +
-      "tactile output on a virtual device, diagnostics, and session export. " +
+      "Runs the full pipeline end to end — corpus ingest, reading-order pagination, " +
+      "search, grounded citations, tactile output on a virtual device, diagnostics, " +
+      "and session export. " +
       "Deterministic and software-only: no hardware, API key, or network required.";
     this.container.appendChild(intro);
 

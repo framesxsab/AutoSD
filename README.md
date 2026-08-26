@@ -5,17 +5,32 @@
 - Zero runtime dependencies. Node built-ins only, aliased out for the browser build.
 - Deterministic by default: the bundled demo runs offline with no API key and no hardware.
 - Accessibility treated as a structural guarantee, not a feature flag: one shared WCAG 2.2 AA gate.
-- Verified state at v0.9.0: 187 tests across 40 files, all green (`npm test`, checked on this release).
+- Verified state: 275 tests across 49 files, all green (`npm test`). The v1.0.0 tree was 219/43; added evaluation, hardening and example tests grew the suite (see `evaluation.baseline.json` `suiteCounts`).
 
-| Documentation                                  |                                                                                           |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Capability matrix](docs/CAPABILITY_MATRIX.md) | The formal release capability matrix. Source of truth for every status claim on this page |
-| [Architecture](docs/ARCHITECTURE.md)           | How the seams fit together                                                                |
-| [Development](docs/DEVELOPMENT.md)             | Day-to-day contributor workflow                                                           |
-| [Plugin guide](docs/PLUGIN_GUIDE.md)           | Write and hot-swap your first plugin                                                      |
-| [Research guide](docs/RESEARCH_GUIDE.md)       | Tune retrieval, add providers, work with citations                                        |
-| [Deployment](docs/DEPLOYMENT.md)               | Static hosting and the Docker image                                                       |
-| [Security](SECURITY.md)                        | Policy, reporting, and the v0.9 audit                                                     |
+| Documentation                                                      |                                                                                           |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| [Getting started](docs/GETTING_STARTED.md)                         | Clone → run → verify → demo in five minutes, plus troubleshooting                         |
+| [Capability matrix](docs/CAPABILITY_MATRIX.md)                     | The formal release capability matrix. Source of truth for every status claim on this page |
+| [Evaluation](docs/EVALUATION.md)                                   | What is proven vs hardware-dependent vs user-validation-pending — and how to check        |
+| [Independent evaluation](docs/INDEPENDENT_EVALUATION.md)           | One-command reproducible evaluation (`npm run evaluate`) with shareable evidence packages |
+| [Evaluation tasks](docs/EVALUATION_TASKS.md)                       | The ten canonical software tasks and how to interpret them                                |
+| [Evaluation schema](docs/EVALUATION_SCHEMA.md)                     | Versioned result schema and the evidence-class boundary                                   |
+| [External evaluator guide](docs/EXTERNAL_EVALUATOR_GUIDE.md)       | Primary hand-off for evaluators: claims, boundaries, how to report                        |
+| [First-contributor checklist](docs/FIRST_CONTRIBUTOR_CHECKLIST.md) | 10 checks from clone to first plugin, every command real                                  |
+| [Clean-clone verification](docs/CLEAN_CLONE_VERIFICATION.md)       | Deterministic clone→evaluate→demo without corpus/secrets/hardware                         |
+| [Baseline migration](docs/BASELINE_MIGRATION.md)                   | How the evaluation baseline evolves safely                                                |
+| [Architecture](docs/ARCHITECTURE.md)                               | How the seams fit together                                                                |
+| [Development](docs/DEVELOPMENT.md)                                 | Day-to-day contributor workflow                                                           |
+| [Contributor map](docs/CONTRIBUTOR_MAP.md)                         | Where help is actually needed, lane by lane                                               |
+| [Good first issues](docs/GOOD_FIRST_ISSUES.md)                     | Issue definitions derived only from real repository gaps                                  |
+| [Fresh contributor test](docs/FRESH_CONTRIBUTOR_TEST.md)           | The full newcomer path with recorded commands and outputs                                 |
+| [Architecture flows](docs/ARCHITECTURE_FLOWS.md)                   | Five flow diagrams mapped to source files                                                 |
+| [Contributor safety](docs/CONTRIBUTOR_SAFETY.md)                   | Secrets model, script execution surfaces, artifact and lockfile boundaries                |
+| [Hardware integration](docs/HARDWARE_INTEGRATION.md)               | Connect a real tactile display without touching core                                      |
+| [Plugin guide](docs/PLUGIN_GUIDE.md)                               | Write and hot-swap your first plugin                                                      |
+| [Research guide](docs/RESEARCH_GUIDE.md)                           | Tune retrieval, add providers, work with citations                                        |
+| [Deployment](docs/DEPLOYMENT.md)                                   | Static hosting and the Docker image                                                       |
+| [Security](SECURITY.md)                                            | Policy, reporting, and the v0.9 audit                                                     |
 
 ## What AutoSD is
 
@@ -38,7 +53,7 @@ Screenshots are placeholders until the release media pass lands. To capture them
 | `#/research`  | Query console with answer, citations, and confidence                  | _placeholder_ |
 | `#/sessions`  | Session history with export and delete actions                        | _placeholder_ |
 | `#/devices`   | Registered devices, active device selection, render controls          | _placeholder_ |
-| `#/demo`      | Six-step guided demo with progress and canonical JSON export          | _placeholder_ |
+| `#/demo`      | Seven-step guided demo with progress and canonical JSON export        | _placeholder_ |
 
 ## Architecture
 
@@ -212,9 +227,17 @@ npm run demo            # progress to stderr, canonical session JSON to stdout
 npm run demo -- --out demo.json
 ```
 
-The demo ingests a fixed four-document corpus about braille displays, runs a hybrid retrieval query, renders the top citations onto a `VirtualDevice` framebuffer, collects diagnostics, and exports the whole run as JSON. Guarantees, straight from `src/app/demo.ts`: no timestamps, no random ids, no network calls, no API key, no hardware. Two runs produce byte-identical output, which makes it a stable fixture for regression checks.
+The demo ingests a fixed four-document corpus about braille displays, paginates it for reading order, runs a hybrid retrieval query, renders the top citations onto a `VirtualDevice` framebuffer, collects diagnostics, and exports the whole run as JSON. Full chain in one command: **ingest → reader → search → citations → tactile → diagnostics → export**. Guarantees, straight from `src/app/demo.ts`: no timestamps, no random ids, no network calls, no API key, no hardware. Two runs produce byte-identical output (`demoVersion: 2`), which makes it a stable fixture for regression checks.
 
 The same demo is available in the browser at the `#/demo` route with step-by-step progress.
+
+### Evaluate it yourself (one command)
+
+```bash
+npm run evaluate        # 11 tasks → evaluation-output/{evaluation.json, evaluation.md, environment.json}
+```
+
+See [docs/INDEPENDENT_EVALUATION.md](docs/INDEPENDENT_EVALUATION.md) for the full path, task matrix, schema, and privacy guarantees.
 
 ### Production build
 
@@ -243,7 +266,7 @@ This section exists because tactile assistive tech attracts overclaiming. Here i
 
 ### Implemented and software-validated
 
-Retrieval, snapshot indexing, live sync, sessions, the browser app, diagnostics, demo mode, plugin infrastructure, device simulation, and the accessibility helper layer are implemented and covered by 187 passing tests. The deterministic demo proves the full pipeline end to end in software.
+Retrieval, snapshot indexing, live sync, sessions, the browser app, diagnostics, demo mode, plugin infrastructure, device simulation, and the accessibility helper layer are implemented and covered by 275 passing tests. The deterministic demo proves the full pipeline end to end in software.
 
 ### Hardware-dependent
 
@@ -263,27 +286,49 @@ The tactile mapping deserves special scrutiny. `textToDots` maps each character 
 
 ## Roadmap
 
-Additive only. Nothing ships by calendar alone; each item needs a re-entry trigger.
+Additive only. Nothing ships by calendar alone; each item needs a re-entry trigger. Statuses follow the [capability matrix](docs/CAPABILITY_MATRIX.md); the full lane-by-lane view of who each item needs is in the [contributor map](docs/CONTRIBUTOR_MAP.md).
 
-**v0.9.x (current line)**
+**v1.0.x (current line)**
 
-- Hardening, bug fixes, docs polish. No breaking changes.
+- Maintenance and adoption only: docs, newcomer experience, evaluation tooling. No breaking changes, no speculative features.
 
-**v1.0 candidates**
+**v1.1 priorities** — ordered by what unblocks everything else:
 
-- Recall@k evaluation harness over a frozen corpus snapshot, with published methodology.
-- Calibrated per-device dot-count profiles, haptic timing, HID capability probing.
-- Tactile reading study with blind and low-vision participants to validate or replace the placeholder dot mapping.
-- Full WCAG audit including assistive-tech user testing.
+1. **Recall@k evaluation harness** over frozen corpus fixtures with committed judgment data. Today no quality number exists anywhere in the repo; this is the prerequisite for every retrieval claim beyond SOFTWARE-VALIDATED.
+2. **First documented hardware integration sessions.** Matrix row 4 has never moved because no physical display has ever been connected. One honest report — success or failure — via [docs/HARDWARE_INTEGRATION.md](docs/HARDWARE_INTEGRATION.md).
+3. **Additive standard-braille mapping option** behind an RFC, leaving the deterministic `charCode % 64` fixture untouched for tests.
+4. **Local ONNX embedding completion** behind the existing provider seam, so search quality can be measured without external services.
+5. **Assistive-tech testing program**: walkthrough script, then first screen-reader user sessions to address matrix rows 15 and 20 honestly.
+6. **Cross-browser manual verification reports** to deepen the app-shell claim (row 14).
+
+**Later candidates (not scheduled):**
+
 - Networked marketplace discovery, signed installs, plugin sandboxing.
-- Complete local ONNX embeddings behind the existing provider seam.
-- Governance finalization (the [MIT LICENSE](LICENSE) has landed; broader governance decisions remain open).
+- Confidence calibration study — or relabeling/removal if calibration proves impractical.
+- Per-device capability profiles (dot counts, refresh timing) once hardware reality is known.
+- Governance finalization (MIT LICENSE landed; broader decisions remain open).
+
+**External validation requirements** — things this repository cannot do alone:
+
+- Tactile readability verdicts from blind and low-vision readers.
+- Physical-device compatibility findings from people who own displays.
+- Peer review of evaluation methodology before any benchmark numbers are treated as evidence.
 
 Larger context lives in [PRD.md](PRD.md) section 14.
 
 ## Release notes
 
 Every claim in these notes follows the status language of [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md): IMPLEMENTED, SOFTWARE-VALIDATED, HARDWARE-DEPENDENT, USER-VALIDATION-PENDING. Nothing here implies tactile output has been validated with human readers, because it has not.
+
+### Unreleased (post-v1.0.0 adoption work)
+
+- **Newcomer documentation**: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md), [docs/EVALUATION.md](docs/EVALUATION.md) with the public [evaluation checklist](docs/EVALUATION_CHECKLIST.md), [docs/CONTRIBUTOR_MAP.md](docs/CONTRIBUTOR_MAP.md), [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md), and [docs/HARDWARE_INTEGRATION.md](docs/HARDWARE_INTEGRATION.md).
+- **Demo v2** (`demoVersion: 2`): added a deterministic reader-pagination step — one command now demonstrates ingest → reader → search → citations → tactile → diagnostics → export. Export gains a `reader` field; byte-stability re-verified.
+- **Claim audit**: corrected stale v0.9-era test counts (187/40 → verified 219/43 on the v1.0.0 tree); roadmap rewritten for v1.x.
+
+### v1.0.0
+
+- Release cut of the v0.9 productization line: capability matrix formalized as the source of truth for all claims, security audit landed, deterministic demo, nine-route app, plugin and device hot-swap infrastructure.
 
 ### v0.9.0
 
@@ -308,11 +353,13 @@ See [BOOTSTRAP.md](BOOTSTRAP.md) (v0.3 baseline) and [docs/architecture-v04.md](
 
 Good entry points, in reading order:
 
-1. [CONTRIBUTING.md](CONTRIBUTING.md): setup, the merge gate, branch and commit conventions.
-2. [BOOTSTRAP.md](BOOTSTRAP.md): 60-second clean-clone sanity check.
-3. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): daily workflow, testing rules, troubleshooting.
-4. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): seams, layers, data flow.
-5. [docs/PLUGIN_GUIDE.md](docs/PLUGIN_GUIDE.md): write a plugin. A complete working example lives at [`src/examples/ExamplePlugin.ts`](src/examples/ExamplePlugin.ts), and a swappable retrieval provider at [`src/examples/ExampleRetrievalProvider.ts`](src/examples/ExampleRetrievalProvider.ts).
+1. [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md): clone → run → verify → demo, with troubleshooting.
+2. [CONTRIBUTING.md](CONTRIBUTING.md): setup, the merge gate, branch and commit conventions.
+3. [docs/CONTRIBUTOR_MAP.md](docs/CONTRIBUTOR_MAP.md): find the lane that fits you; [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) has concrete definitions.
+4. [BOOTSTRAP.md](BOOTSTRAP.md): 60-second clean-clone sanity check.
+5. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): daily workflow, testing rules, troubleshooting.
+6. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): seams, layers, data flow.
+7. [docs/PLUGIN_GUIDE.md](docs/PLUGIN_GUIDE.md): write a plugin. A complete working example lives at [`src/examples/ExamplePlugin.ts`](src/examples/ExamplePlugin.ts), and a swappable retrieval provider at [`src/examples/ExampleRetrievalProvider.ts`](src/examples/ExampleRetrievalProvider.ts).
 
 Rules that matter most: run `npm run verify` before every PR, keep public contracts additive-only, start RFC issues before touching `Device`, `Plugin`, `EmbeddingProvider`, or exported types, and treat accessibility gaps as defects. Security issues go through [SECURITY.md](SECURITY.md), never public issues.
 

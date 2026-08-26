@@ -1,0 +1,86 @@
+{
+  "baseline": "autosd-evaluation-baseline",
+  "baselineVersion": 2,
+  "taskSetVersion": 2,
+  "source": "verified local run (Windows, Node 22) after GFI-3 hardness (11 tasks); see docs/BASELINE_MIGRATION.md",
+  "schemaId": "autosd-evaluation",
+  "schemaVersion": 1,
+  "appVersion": "1.0.0",
+  "evaluationKind": "AUTOMATED",
+  "suiteCounts": {
+    "testFiles": 46,
+    "tests": 239
+  },
+  "requiredTasks": [
+    {
+      "id": "T01-STARTUP",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T02-INGEST",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T03-RETRIEVAL",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T04-CITATIONS",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T05-READER",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T06-SESSION-PERSIST",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T07-EXPORT",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T08-TACTILE-VIRTUAL",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T09-DIAGNOSTICS",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T10-RECOVERY",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    },
+    {
+      "id": "T11-RETRIEVAL-HARDNESS",
+      "status": "pass",
+      "validationLevel": "SOFTWARE-VERIFIED"
+    }
+  ],
+  "durationsMsAdvisory": {
+    "T01-STARTUP": 4933,
+    "T02-INGEST": 4,
+    "T03-RETRIEVAL": 3,
+    "T04-CITATIONS": 0,
+    "T05-READER": 0,
+    "T06-SESSION-PERSIST": 2856,
+    "T07-EXPORT": 0,
+    "T08-TACTILE-VIRTUAL": 1,
+    "T09-DIAGNOSTICS": 2,
+    "T10-RECOVERY": 49,
+    "T11-RETRIEVAL-HARDNESS": 9
+  },
+  "durationPolicy": "advisory-only: WARN at >10x observed, never FAIL — timings are not thresholds",
+  "privacyScanRequired": "pass"
+}

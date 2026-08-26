@@ -59,20 +59,20 @@ autosd/
 
 ## Scripts
 
-| Script       | What it does                                                               |
-| ------------ | -------------------------------------------------------------------------- |
-| `bootstrap`  | Node version check + install if needed + full verify gate                  |
-| `dev`        | Vite dev server on port 5173 (strict port)                                 |
-| `build`      | `tsc -p tsconfig.json && vite build`; emits `dist/` and static `dist-app/` |
-| `preview`    | Serve the built app on port 4173 (strict port)                             |
-| `typecheck`  | `tsc --noEmit`, strict, noEmitOnError                                      |
-| `lint`       | eslint over `.ts`, `.tsx`, `.js`                                           |
-| `lint:fix`   | eslint autofix                                                             |
-| `format`     | prettier check over `src/`, `tests/`, root `*.md`                          |
-| `format:fix` | prettier autofix                                                           |
-| `test`       | vitest run without coverage                                                |
-| `test:watch` | vitest in watch mode                                                       |
-| `verify`     | typecheck + lint + format + test + build. The fast merge gate.             |
+| Script           | What it does                                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `bootstrap`      | Node version check + install if needed + full verify gate                                            |
+| `dev`            | Vite dev server on port 5173 (strict port)                                                           |
+| `build`          | `tsc -p tsconfig.json && vite build`; emits `dist/` and static `dist-app/`                           |
+| `preview`        | Serve the built app on port 4173 (strict port)                                                       |
+| `typecheck`      | `tsc --noEmit`, strict, noEmitOnError                                                                |
+| `lint`           | eslint over `.ts`, `.tsx`, `.js`                                                                     |
+| `lint:fix`       | eslint autofix                                                                                       |
+| `format`         | prettier check over `src/`, `tests/`, root `*.md`                                                    |
+| `format:fix`     | prettier autofix                                                                                     |
+| `test`           | vitest run without coverage                                                                          |
+| `test:watch`     | vitest in watch mode                                                                                 |
+| `verify`         | typecheck + lint + format + test + build. The fast merge gate.                                       |
 | `verify:release` | build + preview server + Lighthouse audit + threshold gate. The release-quality gate (needs Chrome). |
 
 Both dev (5173) and preview (4173) use strict ports. If something already listens there, stop it; Vite will not pick another port.
@@ -81,13 +81,13 @@ Both dev (5173) and preview (4173) use strict ports. If something already listen
 
 Two gates, deliberately kept apart so local development stays quick:
 
-|                    | `npm run verify`                                        | `npm run verify:release`                                                                                       |
-| ------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Purpose            | everyday merge gate                                     | audit the real built app over HTTP                                                                             |
-| Steps              | typecheck, lint, format, tests, build                   | production build, `vite preview` on `127.0.0.1:4173`, HTTP readiness wait, headless-Chrome Lighthouse, gate     |
-| Starts a server?   | never — unit tests do not depend on one                 | yes, briefly; the script stops it when done                                                                    |
-| Needs Chrome?      | no                                                      | yes (Lighthouse drives headless Chrome)                                                                        |
-| Enforced minimums  | all checks green                                        | accessibility ≥ 95, performance ≥ 90                                                                           |
+|                   | `npm run verify`                        | `npm run verify:release`                                                                                    |
+| ----------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Purpose           | everyday merge gate                     | audit the real built app over HTTP                                                                          |
+| Steps             | typecheck, lint, format, tests, build   | production build, `vite preview` on `127.0.0.1:4173`, HTTP readiness wait, headless-Chrome Lighthouse, gate |
+| Starts a server?  | never — unit tests do not depend on one | yes, briefly; the script stops it when done                                                                 |
+| Needs Chrome?     | no                                      | yes (Lighthouse drives headless Chrome)                                                                     |
+| Enforced minimums | all checks green                        | accessibility ≥ 95, performance ≥ 90                                                                        |
 
 Rules of thumb:
 
@@ -164,19 +164,19 @@ di.hotSwap(EMBEDDING_TOKEN, () => myCustomProvider);
 
 ## Troubleshooting
 
-| Symptom                                              | Fix                                                                                              |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `prettier --check` fails                             | `npm run format:fix`, then re-stage                                                              |
-| `eslint` fails                                       | `npm run lint:fix`; if it is a rule dispute, discuss in the PR before editing config             |
-| `tsc --noEmit` errors mentioning `node-hid`          | You imported HID statically. Keep the dynamic import inside `HIDDevice.ts`                       |
-| Port 5173 or 4173 already in use                     | Free the port. Both Vite servers use strict ports and will not fail over                         |
-| OpenAI provider throws "OPENAI_API_KEY not set"      | Expected without a key. Register Mock or Local provider under `embedding:provider`               |
-| Search returns the stub answer ("no indexed corpus") | The corpus is empty. Add files to `corpus/docs/` or call `workflow.ingest([...])` first          |
-| Watcher does not notice file changes                 | Only `.md`, `.txt`, `.json` at the top level of `corpus/docs/` are watched; dotfiles are skipped |
-| `npm audit` reports vulnerabilities                  | They are dev-only (tooling transitive deps). There are no runtime dependencies                   |
-| `verify:release` fails: preview exited early         | Port 4173 is taken (strict port). Free it and rerun                                              |
+| Symptom                                              | Fix                                                                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `prettier --check` fails                             | `npm run format:fix`, then re-stage                                                               |
+| `eslint` fails                                       | `npm run lint:fix`; if it is a rule dispute, discuss in the PR before editing config              |
+| `tsc --noEmit` errors mentioning `node-hid`          | You imported HID statically. Keep the dynamic import inside `HIDDevice.ts`                        |
+| Port 5173 or 4173 already in use                     | Free the port. Both Vite servers use strict ports and will not fail over                          |
+| OpenAI provider throws "OPENAI_API_KEY not set"      | Expected without a key. Register Mock or Local provider under `embedding:provider`                |
+| Search returns the stub answer ("no indexed corpus") | The corpus is empty. Add files to `corpus/docs/` or call `workflow.ingest([...])` first           |
+| Watcher does not notice file changes                 | Only `.md`, `.txt`, `.json` at the top level of `corpus/docs/` are watched; dotfiles are skipped  |
+| `npm audit` reports vulnerabilities                  | They are dev-only (tooling transitive deps). There are no runtime dependencies                    |
+| `verify:release` fails: preview exited early         | Port 4173 is taken (strict port). Free it and rerun                                               |
 | `verify:release` cannot find lighthouse/npx          | Install once with `npm install --no-save lighthouse@12`, or check that Chrome/Chromium is on PATH |
-| Windows path issues                                  | All scripts are cross-platform PowerShell/bash safe. Report any bash-only assumption as a bug    |
+| Windows path issues                                  | All scripts are cross-platform PowerShell/bash safe. Report any bash-only assumption as a bug     |
 
 ## Where to look next
 
