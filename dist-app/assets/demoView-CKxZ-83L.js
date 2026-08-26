@@ -1,1 +1,0 @@
-import{n as e}from"./index-BtQGoJqq.js";function t(t){let n=document.createElement(`section`);n.setAttribute(`aria-label`,`Demo showcase`);let r=new e({announce:e=>t.announce(e)});return{root:n,mount(e){r.mount(n),e.appendChild(n)},unmount(){r.unmount(),n.remove()}}}export{t as createDemoView};

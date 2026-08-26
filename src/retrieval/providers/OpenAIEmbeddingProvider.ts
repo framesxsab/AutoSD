@@ -2,8 +2,15 @@ import type { EmbeddingProvider } from "../embedder.js";
 import { truncate } from "../../utils/sanitize.js";
 
 /**
- * OpenAIEmbeddingProvider — calls OpenAI embeddings API when key present.
- * Falls back to error if no key; pipeline should DI-swap to Mock/Local.
+ * OpenAIEmbeddingProvider — calls an OpenAI-compatible embeddings endpoint.
+ *
+ * Two wiring modes:
+ *  - Keyed (server-side): apiKey comes from constructor/process env
+ *    (`OPENAI_API_KEY`, never import.meta.env). Authorization header sent.
+ *  - Keyless (browser-endpoint): baseUrl points at a PUBLIC, pre-authorized
+ *    gateway validated by config.ts; no secret exists client-side and no
+ *    Authorization header is sent.
+ * Falls back to error if unconfigured; pipeline should DI-swap to Mock/Local.
  *
  * Security: the API key is accepted only via constructor/process env, is never
  * logged, and provider error messages never include raw response bodies
@@ -20,13 +27,14 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     private apiKey = (globalThis as unknown as { process?: { env?: Record<string, string> } })
       .process?.env?.OPENAI_API_KEY ?? "",
     private baseUrl = "https://api.openai.com/v1",
+    private keyless = false,
   ) {
     this.model = model;
     this.dimensions = dimensions;
   }
 
   isConfigured(): boolean {
-    return this.apiKey.length > 0;
+    return this.keyless || this.apiKey.length > 0;
   }
 
   async embed(text: string): Promise<number[]> {
@@ -38,12 +46,11 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     if (!this.isConfigured()) {
       throw new Error("OpenAIEmbeddingProvider: OPENAI_API_KEY not set");
     }
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.apiKey.length > 0) headers.Authorization = `Bearer ${this.apiKey}`;
     const resp = await fetch(`${this.baseUrl}/embeddings`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
-      },
+      headers,
       body: JSON.stringify({ model: this.model, input: texts }),
     });
     if (!resp.ok) {

@@ -72,9 +72,29 @@ autosd/
 | `format:fix` | prettier autofix                                                           |
 | `test`       | vitest run without coverage                                                |
 | `test:watch` | vitest in watch mode                                                       |
-| `verify`     | typecheck + lint + format + test + build. The merge gate.                  |
+| `verify`     | typecheck + lint + format + test + build. The fast merge gate.             |
+| `verify:release` | build + preview server + Lighthouse audit + threshold gate. The release-quality gate (needs Chrome). |
 
 Both dev (5173) and preview (4173) use strict ports. If something already listens there, stop it; Vite will not pick another port.
+
+## Fast vs release verification
+
+Two gates, deliberately kept apart so local development stays quick:
+
+|                    | `npm run verify`                                        | `npm run verify:release`                                                                                       |
+| ------------------ | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Purpose            | everyday merge gate                                     | audit the real built app over HTTP                                                                             |
+| Steps              | typecheck, lint, format, tests, build                   | production build, `vite preview` on `127.0.0.1:4173`, HTTP readiness wait, headless-Chrome Lighthouse, gate     |
+| Starts a server?   | never — unit tests do not depend on one                 | yes, briefly; the script stops it when done                                                                    |
+| Needs Chrome?      | no                                                      | yes (Lighthouse drives headless Chrome)                                                                        |
+| Enforced minimums  | all checks green                                        | accessibility ≥ 95, performance ≥ 90                                                                           |
+
+Rules of thumb:
+
+- Run `npm run verify` before every commit/PR. It stays fast because nothing boots a browser or a long-lived server.
+- Run `npm run verify:release` when your change touches UI, routing, styling, or anything else Lighthouse can see. Pass `--skip-build` (`npm run verify:release -- --skip-build`) to reuse an existing `dist-app/` while iterating.
+- CI mirrors the split: `.github/workflows/ci.yml` runs the fast gate on every push/PR; `.github/workflows/lighthouse.yml` is the release-quality job (install → build → preview → wait-on → Lighthouse → threshold gate → report artifact). Both must pass before merge; neither replaces the other.
+- The thresholds live in one place, `scripts/lighthouse-gate.mjs`, used by both the workflow and the local script. Do not lower them to make a run pass.
 
 ## Testing
 
@@ -154,6 +174,8 @@ di.hotSwap(EMBEDDING_TOKEN, () => myCustomProvider);
 | Search returns the stub answer ("no indexed corpus") | The corpus is empty. Add files to `corpus/docs/` or call `workflow.ingest([...])` first          |
 | Watcher does not notice file changes                 | Only `.md`, `.txt`, `.json` at the top level of `corpus/docs/` are watched; dotfiles are skipped |
 | `npm audit` reports vulnerabilities                  | They are dev-only (tooling transitive deps). There are no runtime dependencies                   |
+| `verify:release` fails: preview exited early         | Port 4173 is taken (strict port). Free it and rerun                                              |
+| `verify:release` cannot find lighthouse/npx          | Install once with `npm install --no-save lighthouse@12`, or check that Chrome/Chromium is on PATH |
 | Windows path issues                                  | All scripts are cross-platform PowerShell/bash safe. Report any bash-only assumption as a bug    |
 
 ## Where to look next

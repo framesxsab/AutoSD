@@ -87,7 +87,17 @@ Built-in providers:
 | ------------------------- | -------- | ------------------------ | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MockEmbeddingProvider`   | `mock`   | `mock-384`               | 384        | Deterministic seeded hash vectors. Default everywhere. Required for CI.                                                                           |
 | `LocalEmbeddingProvider`  | `local`  | `local-bge-small`        | 384        | Tries transformers.js (`Xenova/all-MiniLM-L6-v2`) via dynamic import. Falls back to prefixed mock vectors when unavailable; check `isFallback()`. |
-| `OpenAIEmbeddingProvider` | `openai` | `text-embedding-3-small` | 1536       | Real API calls. Requires `OPENAI_API_KEY`; throws without one. Check `isConfigured()`.                                                            |
+| `OpenAIEmbeddingProvider` | `openai` | `text-embedding-3-small` | 1536       | Calls an OpenAI-compatible endpoint in one of three config modes (see below). Check `isConfigured()`.                                              |
+
+### OpenAI configuration modes (v1.0)
+
+`config.openaiMode` resolves to exactly one of:
+
+1. **`none`** — no external AI: bootstrap registers the mock provider.
+2. **`browser-endpoint`** — `VITE_OPENAI_BASE_URL` points at a validated public, pre-authorized gateway; the provider is constructed keyless and sends no `Authorization` header. Validation (https in production, no credential query params, no embedded `sk-` material, never `api.openai.com`) lives in `src/app/config.ts`; invalid values fall back to mode 1 with a name-only warning.
+3. **`server-side`** — `OPENAI_API_KEY` exists in the process environment (Node/CLI/server only). The browser never holds a key; deploy a same-origin `/api/embeddings` passthrough that injects the key server-side and point mode 2 at it.
+
+Precedence: `browser-endpoint` > `server-side` > `none`. Details and threat model: [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) §3.8.
 
 Important honesty note: when `LocalEmbeddingProvider` falls back, its vectors come from the mock hash, not from MiniLM. Do not report local-model quality numbers unless `isFallback()` is false.
 

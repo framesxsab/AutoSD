@@ -5,7 +5,7 @@ import { OpenAIEmbeddingProvider } from "../retrieval/providers/OpenAIEmbeddingP
 import { LiveSync } from "./LiveSync.js";
 import { DeviceManager } from "../core/DeviceManager.js";
 import { MockDevice } from "../devices/MockDevice.js";
-import { getConfig, hasServerOpenAIKey } from "./config.js";
+import { getConfig } from "./config.js";
 import { logger } from "./logger.js";
 
 export const WORKFLOW_TOKEN = "research:workflow";
@@ -41,16 +41,26 @@ export type BootstrapResult = {
 };
 
 /**
- * Resolve the embedding provider from config.
- * OpenAI requires a server-side key (process env); static browser builds have
- * none, so we fall back to Mock — the app stays usable without optional
- * external services. The key never leaves the provider and is never logged.
+ * Resolve the embedding provider from config (three modes, v1.0):
+ *  - browser-endpoint: VITE_OPENAI_BASE_URL is a validated PUBLIC gateway →
+ *    keyless provider against it; no secret exists client-side.
+ *  - server-side: OPENAI_API_KEY in process env (Node/CLI/server only) →
+ *    keyed provider; the key never leaves the provider and is never logged.
+ *  - none: no safe external wiring → Mock — the app stays usable without
+ *    optional external services.
  */
 export function resolveEmbeddingProvider() {
   const config = getConfig();
   if (config.embeddingProvider === "openai") {
-    if (hasServerOpenAIKey()) return new OpenAIEmbeddingProvider(config.openaiModel);
-    logger.warn("VITE_EMBEDDING_PROVIDER=openai but no server-side OPENAI_API_KEY — using mock");
+    if (config.openaiMode === "browser-endpoint") {
+      return new OpenAIEmbeddingProvider(config.openaiModel, 1536, "", config.openaiBaseUrl, true);
+    }
+    if (config.openaiMode === "server-side") {
+      return new OpenAIEmbeddingProvider(config.openaiModel, 1536, undefined, config.openaiBaseUrl);
+    }
+    logger.warn(
+      "VITE_EMBEDDING_PROVIDER=openai but no safe endpoint or server-side OPENAI_API_KEY — using mock",
+    );
   }
   return new MockEmbeddingProvider();
 }

@@ -1,20 +1,21 @@
 # AutoSD
 
-**A plugin-first tactile and research platform.** AutoSD turns a local document corpus into grounded, citation-backed answers, then renders those answers onto tactile display devices. Write a workflow once, run it against real HID hardware, a framebuffer simulator, or a deterministic in-memory mock without changing a line of code.
+**A plugin-first tactile and research platform.** AutoSD turns a local document corpus into grounded, citation-backed answers, then renders those answers onto tactile display devices. Write a workflow once, run it against HID hardware, a framebuffer simulator, or a deterministic in-memory mock without changing a line of code.
 
 - Zero runtime dependencies. Node built-ins only, aliased out for the browser build.
 - Deterministic by default: the bundled demo runs offline with no API key and no hardware.
 - Accessibility treated as a structural guarantee, not a feature flag: one shared WCAG 2.2 AA gate.
 - Verified state at v0.9.0: 187 tests across 40 files, all green (`npm test`, checked on this release).
 
-| Documentation                            |                                                    |
-| ---------------------------------------- | -------------------------------------------------- |
-| [Architecture](docs/ARCHITECTURE.md)     | How the seams fit together                         |
-| [Development](docs/DEVELOPMENT.md)       | Day-to-day contributor workflow                    |
-| [Plugin guide](docs/PLUGIN_GUIDE.md)     | Write and hot-swap your first plugin               |
-| [Research guide](docs/RESEARCH_GUIDE.md) | Tune retrieval, add providers, work with citations |
-| [Deployment](docs/DEPLOYMENT.md)         | Static hosting and the Docker image                |
-| [Security](SECURITY.md)                  | Policy, reporting, and the v0.9 audit              |
+| Documentation                                  |                                                                                           |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Capability matrix](docs/CAPABILITY_MATRIX.md) | The formal release capability matrix. Source of truth for every status claim on this page |
+| [Architecture](docs/ARCHITECTURE.md)           | How the seams fit together                                                                |
+| [Development](docs/DEVELOPMENT.md)             | Day-to-day contributor workflow                                                           |
+| [Plugin guide](docs/PLUGIN_GUIDE.md)           | Write and hot-swap your first plugin                                                      |
+| [Research guide](docs/RESEARCH_GUIDE.md)       | Tune retrieval, add providers, work with citations                                        |
+| [Deployment](docs/DEPLOYMENT.md)               | Static hosting and the Docker image                                                       |
+| [Security](SECURITY.md)                        | Policy, reporting, and the v0.9 audit                                                     |
 
 ## What AutoSD is
 
@@ -133,6 +134,8 @@ Design rules that hold across the whole codebase: contracts are additive-only, d
 
 ## Feature matrix
 
+The formal release capability matrix for the v1.0 line lives at [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md), with per-row evidence and the rules for moving a row. The table below mirrors its statuses.
+
 Status labels, used consistently and never blurred:
 
 - **IMPLEMENTED**: shipped code with passing coverage.
@@ -140,27 +143,30 @@ Status labels, used consistently and never blurred:
 - **HARDWARE-DEPENDENT**: code ships, but real behavior depends on physical hardware we do not control and have not validated against.
 - **USER-VALIDATION-PENDING**: works in software, but whether it works _for people_ is unproven until users test it.
 
-| Feature                                                       | Status                  | Notes                                                                                                                                   |
-| ------------------------------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `Device` contract with typed events                           | IMPLEMENTED             | `src/core/Device.ts`, additive-only since v0.1                                                                                          |
-| `MockDevice` (deterministic fixture)                          | SOFTWARE-VALIDATED      | In-memory, exposes last pattern for assertions                                                                                          |
-| `VirtualDevice` (framebuffer simulator)                       | SOFTWARE-VALIDATED      | Configurable dot count, CI-safe, drives the demo                                                                                        |
-| `HIDDevice` (WebHID / node-hid adapter)                       | HARDWARE-DEPENDENT      | Dynamic import, graceful fallback when absent. Never tested against physical hardware                                                   |
-| Registry, DI container, atomic hot-swap                       | IMPLEMENTED             | Devices, plugins, and DI providers swap at runtime                                                                                      |
-| Plugin lifecycle (`activate`/`deactivate`/hot-swap)           | IMPLEMENTED             | Single dispatch via `PluginHost`; example in `src/examples/`                                                                            |
-| Hybrid retrieval (BM25 + vectors, RRF k=60)                   | SOFTWARE-VALIDATED      | Tunables in [docs/retrieval.md](docs/retrieval.md)                                                                                      |
-| Incremental snapshot indexing (hash-diffed)                   | SOFTWARE-VALIDATED      | Unchanged documents are never re-embedded                                                                                               |
-| Corpus watching + live sync                                   | SOFTWARE-VALIDATED      | `.md`/`.txt`/`.json`, 150 ms debounce                                                                                                   |
-| Session persistence and JSON export                           | SOFTWARE-VALIDATED      | `corpus/index.json`, `corpus/sessions.json`, cap of 100 sessions                                                                        |
-| Browser app: router, nav, lazy routes                         | IMPLEMENTED             | Nine routes, heavy views load on demand                                                                                                 |
-| Onboarding, error states, loading states                      | IMPLEMENTED             | Persisted completion flag, guarded storage access                                                                                       |
-| Diagnostics report                                            | SOFTWARE-VALIDATED      | Metadata-only, safe to paste into issues, secrets redacted                                                                              |
-| Deterministic demo mode                                       | SOFTWARE-VALIDATED      | Byte-identical export across runs, no network                                                                                           |
-| `VirtualList`, `SessionBrowser`, `CitationView`, `ReaderView` | IMPLEMENTED             | Windowed rendering, keyboard navigation, ARIA grid semantics                                                                            |
-| WCAG 2.2 AA helpers + Lighthouse gate                         | SOFTWARE-VALIDATED      | Automated audits pass. Screen-reader user testing has not happened                                                                      |
-| OpenAI embedding provider                                     | IMPLEMENTED             | Requires server-side `OPENAI_API_KEY`; key never enters the bundle                                                                      |
-| Local embedding provider (transformers.js wrapper)            | SOFTWARE-VALIDATED      | Shipped behavior is the graceful mock fallback, which is tested. Real local-model inference is unproven; ONNX completion is a v1.0 item |
-| Tactile text-to-dots mapping                                  | USER-VALIDATION-PENDING | Byte-stable and device-portable, but see honesty notes below                                                                            |
+| Feature                                                       | Status                  | Notes                                                                                                                                                |
+| ------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Device` contract with typed events                           | IMPLEMENTED             | `src/core/Device.ts`, additive-only since v0.1                                                                                                       |
+| `MockDevice` (deterministic fixture)                          | SOFTWARE-VALIDATED      | In-memory, exposes last pattern for assertions                                                                                                       |
+| `VirtualDevice` (framebuffer simulator)                       | SOFTWARE-VALIDATED      | Configurable dot count, CI-safe, drives the demo                                                                                                     |
+| `HIDDevice` (WebHID / node-hid adapter)                       | HARDWARE-DEPENDENT      | Dynamic import, graceful fallback when absent. Never tested against physical hardware                                                                |
+| Registry, DI container, atomic hot-swap                       | IMPLEMENTED             | Devices, plugins, and DI providers swap at runtime                                                                                                   |
+| Plugin lifecycle (`activate`/`deactivate`/hot-swap)           | SOFTWARE-VALIDATED      | Register, activate, hot-swap, and re-activation covered in `tests/core/registry.test.ts`; example in `src/examples/`                                 |
+| Hybrid retrieval (BM25 + vectors, RRF k=60)                   | SOFTWARE-VALIDATED      | Tunables in [docs/retrieval.md](docs/retrieval.md)                                                                                                   |
+| Incremental snapshot indexing (hash-diffed)                   | SOFTWARE-VALIDATED      | Unchanged documents are never re-embedded                                                                                                            |
+| Corpus watching + live sync                                   | SOFTWARE-VALIDATED      | `.md`/`.txt`/`.json`, 150 ms debounce                                                                                                                |
+| Session persistence and JSON export                           | SOFTWARE-VALIDATED      | `corpus/index.json`, `corpus/sessions.json`, cap of 100 sessions                                                                                     |
+| Research workflow (citations, confidence)                     | SOFTWARE-VALIDATED      | `tests/retrieval/research.test.ts`. `confidence` is a clamped retrieval score, not a calibrated probability                                          |
+| Marketplace workflow (fixture catalog)                        | SOFTWARE-VALIDATED      | Search, install, not-found rejection covered in `tests/workflows/workflows.test.ts`. Install is a lookup, not a package operation                    |
+| Reader workflow pagination                                    | SOFTWARE-VALIDATED      | Pagination counts and aria labels in `tests/workflows/workflows.test.ts`                                                                             |
+| Browser app: router, nav, lazy routes                         | IMPLEMENTED             | Nine routes, heavy views load on demand                                                                                                              |
+| Onboarding, error states, loading states                      | IMPLEMENTED             | Persisted completion flag, guarded storage access                                                                                                    |
+| Diagnostics report                                            | SOFTWARE-VALIDATED      | Metadata-only, safe to paste into issues, secrets redacted                                                                                           |
+| Deterministic demo mode                                       | SOFTWARE-VALIDATED      | Byte-identical export across runs, no network                                                                                                        |
+| `VirtualList`, `SessionBrowser`, `CitationView`, `ReaderView` | IMPLEMENTED             | Windowed rendering, keyboard navigation, ARIA grid semantics                                                                                         |
+| WCAG 2.2 AA helpers + Lighthouse gate                         | SOFTWARE-VALIDATED      | Automated audits pass. Screen-reader user testing has not happened                                                                                   |
+| OpenAI embedding provider                                     | IMPLEMENTED             | Three modes: offline mock (default), keyless public gateway, server-side key — `OPENAI_API_KEY` never enters the bundle (see `.env.example`)         |
+| Local embedding provider (transformers.js wrapper)            | SOFTWARE-VALIDATED      | Shipped behavior is the graceful mock fallback, which is tested. Real local-model inference is unproven; ONNX completion is a v1.0 item              |
+| Tactile text-to-dots mapping                                  | USER-VALIDATION-PENDING | Byte-stable and device-portable. The `charCode % 64` mapping is not standard braille, and no human has validated the output. See honesty notes below |
 
 Explicitly not started (listed here so nobody has to guess):
 
@@ -180,6 +186,16 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. First visit walks you through onboarding; the app starts with the deterministic mock embedding provider, so search works immediately offline. Drop `.md`, `.txt`, or `.json` files into `corpus/docs/` while the app runs and live sync indexes them within about 150 ms.
+
+### Configuring AI embeddings (three modes)
+
+The public browser app never carries an API key. Pick one mode in your env (see [`.env.example`](.env.example) and [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) §3.8):
+
+1. **No external AI** (default): `VITE_EMBEDDING_PROVIDER=mock` — fully offline, deterministic.
+2. **Safe browser endpoint**: set `VITE_OPENAI_BASE_URL` to _your own_ public, pre-authorized gateway (https in production; no credential query params; no embedded key material — invalid values fall back to mock with a warning). AutoSD sends no `Authorization` header.
+3. **Server-side provider**: keep `OPENAI_API_KEY` in your server's process environment only and expose a same-origin `/api/embeddings` passthrough that injects the key server-side; point Mode 2 at it. The key is read exclusively from `process.env`, never from `import.meta.env`, so it cannot enter client bundles.
+
+Setting a secret-looking `VITE_` variable (e.g. `VITE_OPENAI_API_KEY`) triggers a config warning — anything `VITE_`-prefixed ships publicly by design.
 
 ### One-command verification
 
@@ -207,7 +223,7 @@ npm run build     # dist/ (library) + dist-app/ (static site)
 npm run preview   # serve dist-app/ on http://localhost:4173
 ```
 
-`dist-app/` deploys to any static host. A hardened multi-stage `Dockerfile` (nginx, non-root, health check on `/healthz`) ships in the repo root. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+`dist-app/` deploys to any static host. A hardened multi-stage `Dockerfile` (nginx, non-root, health check on `/healthz`) ships in the repo root. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). For the full served-app audit, `npm run verify:release` builds, serves, and runs the same Lighthouse gate CI enforces (accessibility ≥ 95, performance ≥ 90); the everyday `npm run verify` stays server-free and fast.
 
 ## Hardware requirements
 
@@ -235,7 +251,7 @@ Real tactile output requires a physical display. The `Device` seam and the HID a
 
 ### User-validation-pending
 
-The tactile mapping deserves special scrutiny. `textToDots` maps each character to `charCode % 64`, which lands values in the six-dot cell range but is **not standard braille**. It produces stable, device-portable byte patterns suitable for testing the pipeline, not proven-readable braille. Whether any mapping in AutoSD is actually readable by fingertips is an open question that only blind and low-vision readers can answer. Same for the WCAG story: automated audits and Lighthouse pass, but screen-reader user testing has not happened yet.
+The tactile mapping deserves special scrutiny. `textToDots` maps each character to `charCode % 64`, which lands values in the six-dot cell range but is **not standard braille**. It produces stable, device-portable byte patterns suitable for testing the pipeline, not proven-readable braille. No real-world tactile validation has happened: no study, no participants, no readability data. Whether any mapping in AutoSD is actually readable by fingertips is an open question that only blind and low-vision readers can answer. Same for the WCAG story: automated audits and Lighthouse pass, but screen-reader user testing has not happened yet.
 
 ### Research honesty
 
@@ -261,11 +277,13 @@ Additive only. Nothing ships by calendar alone; each item needs a re-entry trigg
 - Full WCAG audit including assistive-tech user testing.
 - Networked marketplace discovery, signed installs, plugin sandboxing.
 - Complete local ONNX embeddings behind the existing provider seam.
-- LICENSE and governance finalization (see below).
+- Governance finalization (the [MIT LICENSE](LICENSE) has landed; broader governance decisions remain open).
 
 Larger context lives in [PRD.md](PRD.md) section 14.
 
 ## Release notes
+
+Every claim in these notes follows the status language of [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md): IMPLEMENTED, SOFTWARE-VALIDATED, HARDWARE-DEPENDENT, USER-VALIDATION-PENDING. Nothing here implies tactile output has been validated with human readers, because it has not.
 
 ### v0.9.0
 
@@ -300,4 +318,6 @@ Rules that matter most: run `npm run verify` before every PR, keep public contra
 
 ## License
 
-AutoSD does not ship a LICENSE file yet. Until one lands, all rights are reserved by default and the package is marked private. License selection (likely a permissive OSS license) is tracked as a v1.0 roadmap item. If you want to use the code before then, open an issue.
+AutoSD is released under the [MIT License](LICENSE), copyright 2026 AutoSD contributors. By contributing, you agree that your contributions are licensed under the same terms.
+
+Why MIT fits this project: AutoSD has zero runtime dependencies, so no third-party code ships in the distributed artifact and no dependency license constrains downstream users. Everything in the lockfile is a devDependency (TypeScript, Vite, Vitest, ESLint, Prettier, jsdom and their transitive packages) under permissive terms: MIT, Apache-2.0, BSD, ISC, and MPL-2.0. No GPL-family license appears anywhere in the tree, so there is nothing forcing a stronger or weaker choice. MIT keeps reuse and contribution friction low while carrying the minimum notice-and-disclaimer obligations.

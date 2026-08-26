@@ -83,7 +83,7 @@ Catalog is an in-repo fixture (reader/tts/braille). Search is substring over `na
 
 `ReaderWorkflow.paginate(doc, charsPerPage=1000) → ReaderPage[]` (`ariaLabel: "Title — page N"`; `toLiveRegion(page)` for polite announcements) → `TactileWorkflow.renderText(device, text)` (`textToDots` 6-dot mapping, `device.render(pattern)`) or `renderPages(device, pages)`.
 
-Pagination + aria is unit-tested; tactile mapping is byte-stable and any `Device` can render it.
+Pagination + aria is unit-tested; tactile mapping is byte-stable and any `Device` can render it. The mapping (`charCode % 64`) is a placeholder, not standard braille, and no human has validated the tactile output. Status: USER-VALIDATION-PENDING per [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md).
 
 ## 6. Functional Requirements
 

@@ -6,7 +6,7 @@
  * Never includes: API keys, file contents, absolute paths, stack traces.
  */
 
-import { getConfig, hasServerOpenAIKey } from "./config.js";
+import { getConfig } from "./config.js";
 import type { ResearchWorkflow } from "../workflows/research.js";
 import type { LiveSync, SyncStatus } from "./LiveSync.js";
 
@@ -83,9 +83,9 @@ export function getHealth(deps: HealthDeps = {}): HealthReport {
 
   const providerId =
     config.embeddingProvider === "openai"
-      ? hasServerOpenAIKey()
+      ? config.openaiMode !== "none"
         ? "openai"
-        : "mock (fallback: no server key)"
+        : "mock (fallback: no safe endpoint or server key)"
       : config.embeddingProvider;
 
   // Degraded when a workflow exists but the corpus failed to index anything,

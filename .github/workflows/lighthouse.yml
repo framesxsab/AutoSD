@@ -21,8 +21,8 @@ jobs:
           npx wait-on http://127.0.0.1:4173 --timeout 30000
       - name: Run Lighthouse
         run: |
-          npx lighthouse http://127.0.0.1:4173 --only-categories=accessibility,performance --output=json --output-path=./lighthouse.json --chrome-flags="--headless --no-sandbox --disable-gpu" --quiet
-          node -e "const j=require('./lighthouse.json'); const a=j.categories.accessibility.score*100; const p=j.categories.performance.score*100; console.log('accessibility',a,'performance',p); if(a<95) {console.error('accessibility <95'); process.exit(1)}; if(p<90) {console.error('performance <90'); process.exit(1)}"
+          npx --yes lighthouse@12 http://127.0.0.1:4173 --only-categories=accessibility,performance --output=json --output-path=./lighthouse.json --chrome-flags="--headless --no-sandbox --disable-gpu" --quiet
+          node scripts/lighthouse-gate.mjs ./lighthouse.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -25,7 +25,8 @@ dynamic imports.
 └───────────────┬────────────────────────────────────────────────────┘
                 │ optional outbound HTTPS
                 ▼
-   api.openai.com (only if a user explicitly supplies a client-side key)
+   Your own keyless embeddings gateway (only in Mode 2, see §3.8 —
+   never api.openai.com with a client-side key)
 ```
 
 **There is no backend, no database, and no server-side session state.**
@@ -49,8 +50,8 @@ Primary attackers considered:
 2. **Malicious session data** — hand-edits `sessions.json`/`index.json` on
    disk; goals: XSS via rendered sessions, logic corruption.
 3. **Curious local user** — inspects the bundle for secrets.
-4. **Network observer** — sees only static asset fetches unless the user
-   opted into a client-side OpenAI key (then: TLS-protected API calls).
+4. **Network observer** — sees only static asset fetches unless Mode 2 is
+   configured (then: TLS-protected calls to the operator's own gateway).
 
 ## 3. Per-area audit
 
@@ -137,20 +138,52 @@ All dynamic `import()` sites are static-literal and non-user-controlled:
 
 No `eval`, no `new Function`, no `setTimeout(string)` anywhere in `src/`.
 
-### 3.8 OpenAI configuration
+### 3.8 Browser OpenAI configuration (three modes)
 
-- Endpoint/model are configurable via non-secret `VITE_OPENAI_BASE_URL` /
-  `VITE_OPENAI_MODEL`; `config.ts` strips userinfo from URLs and falls back
-  to the official endpoint on malformed input.
-- Error hygiene: failed responses contribute only the HTTP status plus a
-  truncated (300-char), key-redacted body fragment to exception messages.
-- Availability contract: missing key ⇒ Mock provider ⇒ full offline function.
+The public browser app must **never** expose `OPENAI_API_KEY`. Configuration
+resolves to exactly one mode, exposed as `config.openaiMode`:
+
+| Mode                 | Trigger                                             | What the browser gets                                                        |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 1. `none`            | No endpoint configured, no server key               | Mock provider. Fully offline; nothing external is contacted.                  |
+| 2. `browser-endpoint`| `VITE_OPENAI_BASE_URL` set to a **validated public** endpoint | Keyless provider calling that endpoint. No secret exists client-side and no `Authorization` header is sent. The endpoint must be pre-authorized by other means (IP allowlist, internal gateway). |
+| 3. `server-side`     | `OPENAI_API_KEY` present in `process.env` (Node/CLI/server only) | In Node contexts: keyed provider. In static browser builds there is no process env, so this resolves to Mode 1. Documented deployment shape: run your own same-origin `/api/embeddings` passthrough that injects the key server-side and point Mode 2 at it. |
+
+Precedence when several triggers apply: an explicitly configured, validated
+public endpoint wins (`browser-endpoint` > `server-side` > `none`) — it is the
+deployment's declared client-side wiring.
+
+**Validation of `VITE_OPENAI_BASE_URL`** (enforced in `src/app/config.ts`;
+violations fall back to the official endpoint default plus a name-only
+warning — never throws):
+
+- must parse as an absolute http(s) URL;
+- **https required in production** builds (http tolerated in dev/test only);
+- credential-bearing query parameters (`api_key`, `token`, `secret`,
+  `password`, `signature`, …) → rejected outright;
+- embedded `sk-…` key material anywhere in the URL → rejected;
+- userinfo (`user:pass@host`) is stripped for compatibility but flagged via a
+  warning so operators notice credentials were about to ship;
+- `api.openai.com` itself can never act as a browser endpoint: it always
+  requires a secret, so pointing the variable at it keeps Mode 1/3 semantics.
+
+**Structural exclusion of secrets:** `config.ts` copies only `VITE_*`-named
+variables from `import.meta.env`/`process.env` into its parsing map, so
+`OPENAI_API_KEY` cannot reach config code even by mistake. It is read solely
+through guarded `globalThis.process.env` inside the provider default parameter
+and `hasServerOpenAIKey()`. Additionally, any `VITE_`-prefixed variable whose
+*name* looks like a secret (e.g. `VITE_OPENAI_API_KEY`) triggers a warning,
+because everything `VITE_`-prefixed ships publicly.
+
+Error hygiene: failed responses contribute only the HTTP status plus a
+truncated (300-char), key-redacted body fragment to exception messages.
+Availability contract: no valid wiring ⇒ Mock provider ⇒ full offline function.
 
 ## 4. Controls summary
 
 | Control | Implementation |
 | ------- | -------------- |
-| Env validation | `src/app/config.ts` — frozen, never throws, name-only warnings |
+| Env validation | `src/app/config.ts` — frozen, never throws, name-only warnings; VITE_* structural filter; base-URL rules (https-in-prod, no credential query params, no `sk-` material); secret-looking `VITE_` names flagged |
 | Log redaction | `src/app/logger.ts` — `sk-…`, Bearer, `key=`/`token=` patterns + registered literals; length caps; stacks debug-only |
 | Error containment | `src/app/ErrorBoundary.ts` — window handlers, `role="alert"` fallback, retry, sanitized output |
 | Output encoding | DOM APIs everywhere; `escapeHtml`/`escapeSelector` where strings are unavoidable |
@@ -161,9 +194,12 @@ No `eval`, no `new Function`, no `setTimeout(string)` anywhere in `src/`.
 
 ## 5. Residual risks & accepted limitations
 
-1. **Client-side user-supplied OpenAI keys** would be visible to anyone with
-   devtools on that machine — inherent to backend-free apps; documented, not
-   mitigable without a proxy backend (explicitly out of scope).
+1. **Mode 2 endpoints are trusted infrastructure.** A keyless browser
+    endpoint must enforce its own access control (network allowlist, signed
+    URLs, internal-only deployment); AutoSD sends no credentials to it.
+    Client-side user-supplied OpenAI keys remain unsupported — they would be
+    visible to anyone with devtools on that machine and are documented as an
+    anti-pattern, not a mode.
 2. **Plugins are fully page-privileged.** Acceptable because plugins ship in
    the reviewed bundle; treat malicious-plugin risk as supply-chain risk.
 3. **CSP allows inline styles** (`style-src 'unsafe-inline'`) due to the
@@ -178,5 +214,6 @@ No `eval`, no `new Function`, no `setTimeout(string)` anywhere in `src/`.
 - [ ] Grep sweeps clean: no new `innerHTML` with interpolation, no `eval`,
       no `VITE_`-prefixed secrets, no user-controlled `import()`.
 - [ ] `dist-app/` contains no `.env`, no source maps, no corpus data.
+- [ ] `grep -r "sk-" dist-app/` finds nothing (no key material in bundles).
 - [ ] Docker image: `docker history` shows no env-file layers; `/healthz`
       returns 200; security headers present (`curl -I`).

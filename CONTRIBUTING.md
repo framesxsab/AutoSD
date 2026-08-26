@@ -45,6 +45,18 @@ CI runs the same gate on every push to `main` and every PR (see `.github/workflo
 
 Run `npm run verify` before every PR. If prettier complains, run `npm run format:fix`. If eslint complains, run `npm run lint:fix`.
 
+### Release-quality verification
+
+`npm run verify` never starts a server, which is what keeps it fast — unit tests do not depend on one. The served-app audit lives behind a second gate:
+
+```bash
+npm run verify:release
+```
+
+This builds the app, serves `dist-app/` on `127.0.0.1:4173`, waits for HTTP readiness, runs headless-Chrome Lighthouse (`accessibility` + `performance`), and enforces accessibility ≥ 95 / performance ≥ 90 via `scripts/lighthouse-gate.mjs` — the same thresholds and script the Lighthouse workflow enforces in CI. It needs Chrome installed and stops the preview server when done.
+
+You do not need to run it for every change; CI always does. Run it locally when your change touches UI, routing, styling, or anything else Lighthouse can see. Details in `docs/DEVELOPMENT.md` ("Fast vs release verification").
+
 ## Finding work
 
 Check the issue tracker for open issues. Useful labels when filing or picking up work:
@@ -88,6 +100,7 @@ Contract changes always start as an RFC issue before code. See "Additive-only ru
 ### PR checklist
 
 - [ ] `npm run verify` passes locally
+- [ ] UI-affecting changes: `npm run verify:release` passes locally (CI's Lighthouse job runs it regardless)
 - [ ] Tests cover the new behavior or the fixed bug
 - [ ] No public contract field was removed or renamed
 - [ ] UI changes keep WCAG 2.2 AA behavior (contrast, target size, focus order, live regions)
@@ -153,3 +166,7 @@ Keep docs honest. Mark anything not yet implemented as pending rather than descr
 - No backend services or databases. AutoSD is local-first with file persistence under `corpus/`.
 - No new runtime dependencies. The core has zero runtime deps; devDependencies cover tooling.
 - No fabricated numbers. Benchmarks, coverage claims, and hardware results need reproducible evidence in the PR.
+
+## License
+
+AutoSD is released under the [MIT License](LICENSE). By opening a PR, you agree that your contribution is licensed under those same terms.
