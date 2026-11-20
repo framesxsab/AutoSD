@@ -27,7 +27,7 @@ declare const __APP_VERSION__: string | undefined;
 
 export type Environment = "development" | "production" | "test";
 export type LogLevel = "debug" | "info" | "warn" | "error";
-export type EmbeddingProviderId = "mock" | "local" | "openai";
+export type EmbeddingProviderId = "mock" | "lexical" | "local" | "openai";
 
 /**
  * How external OpenAI-compatible embeddings are wired (v1.0):
@@ -63,7 +63,7 @@ export type AppConfig = {
 type RawEnv = Record<string, string | boolean | undefined>;
 
 const LOG_LEVELS: readonly LogLevel[] = ["debug", "info", "warn", "error"];
-const PROVIDERS: readonly EmbeddingProviderId[] = ["mock", "local", "openai"];
+const PROVIDERS: readonly EmbeddingProviderId[] = ["mock", "lexical", "local", "openai"];
 const ENVIRONMENTS: readonly Environment[] = ["development", "production", "test"];
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 

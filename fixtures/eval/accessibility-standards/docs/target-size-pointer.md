@@ -1,0 +1,5 @@
+# Pointer Target Size and Ergonomics
+
+Small, tightly packed interactive targets cause frequent accidental activations for people with hand tremors, limited fine motor control, arthritis, or thick fingers on touchscreens. Accessibility standards specify a minimum target footprint of 24 by 24 CSS pixels for clickable buttons, links, checkboxes, and toolbar icons, while enhanced guidelines recommend 44 by 44 pixels on touch-first layouts.
+
+When a compact design prevents enlarging an inline icon visually, authors can satisfy spacing rules by ensuring a 24-pixel diameter circle centered on each undersized target does not overlap any adjacent control or its bounding box. Adequate hit padding around pagination buttons, close icons, and tactile transport controls improves speed and reduces fatigue for every visitor. Exceptions exist only for inline hyperlinks flowing inside dense sentences, native browser controls left unstyled, or situations where exact physical geometry is legally or functionally essential.

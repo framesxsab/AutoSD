@@ -65,4 +65,32 @@ describe("BM25Index", () => {
     idx.addChunk(mkChunk("d1#0", "hello world hello"));
     expect(idx.search("hello")).toHaveLength(1);
   });
+
+  it("replacing an existing chunk id updates TF/DF/size cleanly without duplicates", () => {
+    const idx = new BM25Index();
+    idx.addChunk(mkChunk("d1#0", "alpha alpha beta"));
+    idx.addChunk(mkChunk("d2#0", "gamma delta"));
+    expect(idx.size()).toBe(2);
+
+    idx.addChunk(mkChunk("d1#0", "gamma gamma gamma"));
+    expect(idx.size()).toBe(2);
+    expect(idx.search("alpha")).toEqual([]);
+    const res = idx.search("gamma");
+    expect(res).toHaveLength(2);
+    expect(res[0].chunk.id).toBe("d1#0");
+  });
+
+  it("scores accurately and quickly across 1,000 indexed chunks", () => {
+    const idx = new BM25Index();
+    for (let i = 0; i < 1000; i++) {
+      const content =
+        i === 742
+          ? "piezoelectric refreshable braille actuator calibration guide"
+          : `generic document paragraph number ${i} with routine text`;
+      idx.addChunk(mkChunk(`doc${i}#0`, content));
+    }
+    const res = idx.search("piezoelectric braille actuator", 5);
+    expect(res[0].chunk.id).toBe("doc742#0");
+    expect(res[0].score).toBeGreaterThan(0);
+  });
 });

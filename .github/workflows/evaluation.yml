@@ -26,6 +26,10 @@ jobs:
         run: node scripts/check-evaluation-baseline.mjs
       - name: Validate artifact schema
         run: node scripts/run-evaluation.mjs --validate evaluation-output/evaluation.json
+      - name: Run retrieval quality harness
+        run: npm run eval:quality
+      - name: Check retrieval quality baseline
+        run: npm run eval:quality:gate
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -35,3 +39,5 @@ jobs:
             evaluation-output/evaluation.json
             evaluation-output/evaluation.md
             evaluation-output/environment.json
+            evaluation-output/quality.json
+            evaluation-output/quality.md

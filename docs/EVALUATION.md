@@ -15,7 +15,7 @@ The formal claim registry is [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md). Every
 
 | Capability                                                                                            | Evidence                                                              | How to check                                              |
 | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------- |
-| 275 tests across 49 files, all green (was 219/43 at v1.0.0)                                           | `npm test`                                                            | Run it (≈15 s)                                            |
+| 290 tests across 52 files, all green (was 219/43 at v1.0.0)                                           | `npm test`                                                            | Run it (≈45 s)                                            |
 | Deterministic end-to-end demo (ingest → reader → search → citations → tactile → diagnostics → export) | `src/app/demo.ts`, `tests/app/demo.test.ts`                           | `npm run demo` twice; exports are byte-identical          |
 | Hybrid retrieval: BM25 + vector cosine, RRF fusion (k=60), optional rerankers                         | `tests/retrieval/pipeline.test.ts`                                    | Read tests; run demo and inspect citation scores          |
 | Incremental snapshot indexing (hash-diffed; unchanged docs never re-embedded)                         | `tests/retrieval/snapshot.test.ts`                                    | Read test assertions                                      |
@@ -29,8 +29,8 @@ Caveats that are part of the software story:
 
 - `confidence` on research results is a clamped retrieval score, **not a calibrated probability**.
 - The marketplace catalog is an in-repo fixture (`autosd-reader`, `autosd-tts`, `autosd-braille`); "install" is a lookup, not a package operation.
-- With the default mock embedding provider, search quality is functional, not tuned.
-- No recall@k, precision, or latency benchmarks exist anywhere because no evaluation harness exists yet. Any number would be fabricated.
+- With the `mock` embedding provider (`VITE_EMBEDDING_PROVIDER=mock`), vector rankings come from a seeded FNV-1a PRNG and degrade BM25 under RRF; `VITE_EMBEDDING_PROVIDER=lexical` (`LexicalHashEmbeddingProvider`) provides deterministic offline feature-hashed vectors that improve over BM25 on frozen fixtures.
+- Internal recall@k / MRR / nDCG@10 numbers exist via `npm run eval:quality` (`docs/RETRIEVAL_QUALITY.md`), evaluated over frozen fixtures with `maintainer-authored-provisional` judgments only. External comparative benchmarks remain unpublished.
 
 ## 2. Hardware-dependent capabilities (code ships, zero physical validation)
 
@@ -56,7 +56,7 @@ These are the open questions this repository cannot answer about itself. Answeri
 
 1. **Does any AutoSD tactile output read correctly by touch?** (Requires blind/low-vision participants; validates or replaces `charCode % 64`.)
 2. **Which real displays work through the HID adapter, and what breaks first?** (Requires one integration session per device.)
-3. **What is the retrieval quality?** (Requires a frozen corpus snapshot + recall@k harness; no numbers exist today.)
+3. **What is the retrieval quality on real corpora with peer-reviewed judgments?** (`npm run eval:quality` measures internal configs on frozen provisional fixtures; real-corpus quality and external judgment review remain open.)
 4. **Is `confidence` meaningful to users?** (Requires calibration study or removal/relabeling.)
 5. **Do screen-reader users complete the core flows** (search → citations → sessions)? (Requires AT user testing; automated audits cannot answer this.)
 6. **Is the mock provider good enough for evaluation, or must ONNX local embeddings land first?**

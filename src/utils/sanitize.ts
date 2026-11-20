@@ -28,7 +28,7 @@ export function escapeSelector(value: unknown): string {
   const cssEscape = (globalThis as unknown as { CSS?: { escape?: (v: string) => string } }).CSS
     ?.escape;
   if (typeof cssEscape === "function") return cssEscape(text);
-  return text.replace(/(["\\])/g, "\\$1");
+  return text.replace(/(["\\])/g, "\\$1").replace(/[\u0000-\u001f\u007f]/g, " ");
 }
 
 /** Hard cap for embedding untrusted text into logs/errors/UI previews. */
@@ -49,4 +49,19 @@ export function safeJsonParse<T>(raw: string, guard?: (value: unknown) => value 
   } catch {
     return null;
   }
+}
+
+const PATH_TRAVERSAL_SEGMENT = /(^|[\\/])\.\.([\\/]|$)/;
+
+/**
+ * Guard filesystem paths against null-byte injection and `..` path traversal.
+ */
+export function assertSafePath(filePath: string): string {
+  if (typeof filePath !== "string" || filePath.trim().length === 0) {
+    throw new Error("SecurityError: empty file path");
+  }
+  if (filePath.includes("\0") || PATH_TRAVERSAL_SEGMENT.test(filePath)) {
+    throw new Error(`SecurityError: path traversal rejected for "${filePath}"`);
+  }
+  return filePath;
 }

@@ -5,13 +5,14 @@
 - Zero runtime dependencies. Node built-ins only, aliased out for the browser build.
 - Deterministic by default: the bundled demo runs offline with no API key and no hardware.
 - Accessibility treated as a structural guarantee, not a feature flag: one shared WCAG 2.2 AA gate.
-- Verified state: 275 tests across 49 files, all green (`npm test`). The v1.0.0 tree was 219/43; added evaluation, hardening and example tests grew the suite (see `evaluation.baseline.json` `suiteCounts`).
+- Verified state: 290 tests across 52 files, all green (`npm test`). The v1.0.0 tree was 219/43; added evaluation, hardening, retrieval-quality, and example tests grew the suite (see `evaluation.baseline.json` `suiteCounts`).
 
 | Documentation                                                      |                                                                                           |
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
 | [Getting started](docs/GETTING_STARTED.md)                         | Clone → run → verify → demo in five minutes, plus troubleshooting                         |
 | [Capability matrix](docs/CAPABILITY_MATRIX.md)                     | The formal release capability matrix. Source of truth for every status claim on this page |
 | [Evaluation](docs/EVALUATION.md)                                   | What is proven vs hardware-dependent vs user-validation-pending — and how to check        |
+| [Retrieval quality](docs/RETRIEVAL_QUALITY.md)                     | Offline recall@k/MRR/nDCG@10 harness (`npm run eval:quality`) and provisional ablations   |
 | [Independent evaluation](docs/INDEPENDENT_EVALUATION.md)           | One-command reproducible evaluation (`npm run evaluate`) with shareable evidence packages |
 | [Evaluation tasks](docs/EVALUATION_TASKS.md)                       | The ten canonical software tasks and how to interpret them                                |
 | [Evaluation schema](docs/EVALUATION_SCHEMA.md)                     | Versioned result schema and the evidence-class boundary                                   |
@@ -185,7 +186,7 @@ Status labels, used consistently and never blurred:
 
 Explicitly not started (listed here so nobody has to guess):
 
-- Recall@k evaluation harness. Roadmap item, no published numbers exist.
+- External peer-reviewed / real-corpus retrieval benchmarks (`npm run eval:quality` ships internal ablations on frozen fixtures with provisional maintainer judgments; external comparative benchmarks remain out of scope).
 - Networked marketplace installs. The catalog is an in-repo fixture today.
 - Plugin sandboxing. Roadmap item.
 
@@ -206,7 +207,7 @@ Open `http://localhost:5173`. First visit walks you through onboarding; the app 
 
 The public browser app never carries an API key. Pick one mode in your env (see [`.env.example`](.env.example) and [docs/SECURITY_ARCHITECTURE.md](docs/SECURITY_ARCHITECTURE.md) §3.8):
 
-1. **No external AI** (default): `VITE_EMBEDDING_PROVIDER=mock` — fully offline, deterministic.
+1. **No external AI**: `VITE_EMBEDDING_PROVIDER=mock` (default, deterministic PRNG vectors for fixture/demo compatibility) or `VITE_EMBEDDING_PROVIDER=lexical` (`LexicalHashEmbeddingProvider`, offline word + char-3gram feature hashing).
 2. **Safe browser endpoint**: set `VITE_OPENAI_BASE_URL` to _your own_ public, pre-authorized gateway (https in production; no credential query params; no embedded key material — invalid values fall back to mock with a warning). AutoSD sends no `Authorization` header.
 3. **Server-side provider**: keep `OPENAI_API_KEY` in your server's process environment only and expose a same-origin `/api/embeddings` passthrough that injects the key server-side; point Mode 2 at it. The key is read exclusively from `process.env`, never from `import.meta.env`, so it cannot enter client bundles.
 
@@ -235,6 +236,7 @@ The same demo is available in the browser at the `#/demo` route with step-by-ste
 
 ```bash
 npm run evaluate        # 11 tasks → evaluation-output/{evaluation.json, evaluation.md, environment.json}
+npm run eval:quality    # offline recall@k / MRR / nDCG@10 → evaluation-output/{quality.json, quality.md}
 ```
 
 See [docs/INDEPENDENT_EVALUATION.md](docs/INDEPENDENT_EVALUATION.md) for the full path, task matrix, schema, and privacy guarantees.
@@ -266,7 +268,7 @@ This section exists because tactile assistive tech attracts overclaiming. Here i
 
 ### Implemented and software-validated
 
-Retrieval, snapshot indexing, live sync, sessions, the browser app, diagnostics, demo mode, plugin infrastructure, device simulation, and the accessibility helper layer are implemented and covered by 275 passing tests. The deterministic demo proves the full pipeline end to end in software.
+Retrieval, snapshot indexing, live sync, sessions, the browser app, diagnostics, demo mode, plugin infrastructure, device simulation, and the accessibility helper layer are implemented and covered by 290 passing tests. The deterministic demo proves the full pipeline end to end in software.
 
 ### Hardware-dependent
 
@@ -278,10 +280,11 @@ The tactile mapping deserves special scrutiny. `textToDots` maps each character 
 
 ### Research honesty
 
-- No recall@k, precision, or latency benchmarks are published because the evaluation harness does not exist yet. Any number here would be fabricated.
+- Internal recall@k / MRR / nDCG@10 ablations on frozen fixtures (`npm run eval:quality`) now exist in [docs/RETRIEVAL_QUALITY.md](docs/RETRIEVAL_QUALITY.md), backed by `maintainer-authored-provisional` judgments. External peer review of those judgments and real-corpus benchmarks remain unpublished.
+- With the `mock` provider (`VITE_EMBEDDING_PROVIDER=mock`), vectors are seeded FNV-1a PRNG outputs that degrade BM25 under RRF; `VITE_EMBEDDING_PROVIDER=lexical` (`LexicalHashEmbeddingProvider`) provides signal-bearing offline feature-hashed vectors that outperform BM25 alone on the frozen fixtures.
 - `confidence` in research results is derived from retrieval scores (clamped max score). It is not a calibrated probability.
 - The marketplace catalog is a fixture (`autosd-reader`, `autosd-tts`, `autosd-braille`). Install is a lookup, not a package operation.
-- Local embeddings fall back to deterministic mock vectors unless transformers.js loads. Search quality with the mock provider is functional, not tuned.
+- Local embeddings fall back to deterministic mock vectors unless transformers.js loads.
 - Personas in [PRD.md](PRD.md) are design targets, not users. AutoSD has no user base to cite.
 
 ## Roadmap
@@ -294,7 +297,7 @@ Additive only. Nothing ships by calendar alone; each item needs a re-entry trigg
 
 **v1.1 priorities** — ordered by what unblocks everything else:
 
-1. **Recall@k evaluation harness** over frozen corpus fixtures with committed judgment data. Today no quality number exists anywhere in the repo; this is the prerequisite for every retrieval claim beyond SOFTWARE-VALIDATED.
+1. **Retrieval-quality harness & offline vector fix (M0–M2 landed; peer review open).** `npm run eval:quality` and `LexicalHashEmbeddingProvider` (`VITE_EMBEDDING_PROVIDER=lexical`) now ship with `maintainer-authored-provisional` judgments ([docs/RETRIEVAL_QUALITY.md](docs/RETRIEVAL_QUALITY.md)); external judgment review and real-corpus benchmarks remain open.
 2. **First documented hardware integration sessions.** Matrix row 4 has never moved because no physical display has ever been connected. One honest report — success or failure — via [docs/HARDWARE_INTEGRATION.md](docs/HARDWARE_INTEGRATION.md).
 3. **Additive standard-braille mapping option** behind an RFC, leaving the deterministic `charCode % 64` fixture untouched for tests.
 4. **Local ONNX embedding completion** behind the existing provider seam, so search quality can be measured without external services.

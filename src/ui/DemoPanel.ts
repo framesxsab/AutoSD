@@ -72,6 +72,7 @@ export class DemoPanel {
     const heading = document.createElement("h2");
     heading.id = this.headingId;
     heading.textContent = "Demo";
+    heading.dataset.autosdViewHeading = "true";
     this.container.appendChild(heading);
 
     const intro = document.createElement("p");
@@ -98,6 +99,7 @@ export class DemoPanel {
     this.container.appendChild(this.statusEl);
 
     this.stepsEl = document.createElement("ol");
+    this.stepsEl.className = "autosd-demo-steps";
     this.stepsEl.setAttribute("role", "list");
     this.stepsEl.setAttribute("aria-label", "Demo progress");
     for (const step of DEMO_STEPS) {
@@ -228,6 +230,7 @@ export class DemoPanel {
     tactileSec.appendChild(tactileHeading);
     result.frames.forEach((frame, idx) => {
       const wrap = document.createElement("div");
+      wrap.className = "autosd-tactile-frame";
       const active = frame.pattern.filter(v => v > 0).length;
       wrap.setAttribute("role", "img");
       wrap.setAttribute(
@@ -285,6 +288,7 @@ export class DemoPanel {
 
     // Export actions — copy and download the deterministic session JSON.
     const actions = document.createElement("div");
+    actions.className = "autosd-demo-actions";
     actions.setAttribute("role", "group");
     actions.setAttribute("aria-label", "Demo export actions");
     const copyBtn = document.createElement("button");

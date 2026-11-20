@@ -2,7 +2,12 @@ import { describe, it, expect } from "vitest";
 import { ResearchWorkflow } from "../../src/workflows/research.js";
 import { MarketplaceWorkflow } from "../../src/workflows/marketplace.js";
 import { ReaderWorkflow } from "../../src/workflows/reader.js";
-import { TactileWorkflow, textToDots } from "../../src/workflows/tactile.js";
+import {
+  measureBrailleCells,
+  TactileWorkflow,
+  textToDots,
+  wrapTextToBrailleLines,
+} from "../../src/workflows/tactile.js";
 import { MockDevice } from "../../src/devices/MockDevice.js";
 
 describe("workflows", () => {
@@ -30,5 +35,42 @@ describe("workflows", () => {
     await t.renderText(dev, "hello");
     expect(dev.getLastPattern()?.length).toBeGreaterThan(0);
     expect(textToDots("hi", 5).length).toBe(5);
+  });
+  it("M4 cell-aware braille measurement, line wrapping, and pagination respect capital/number signs", async () => {
+    // "Hi 12" => 'H' (2 cells: capital + h), 'i' (1), ' ' (1), '12' (3 cells: number sign + a + b) = 7 cells
+    expect(measureBrailleCells("Hi 12")).toBe(7);
+
+    const lines = wrapTextToBrailleLines(
+      "AutoSD tactile reader wraps Grade 1 Braille cleanly across display cells.",
+      20,
+    );
+    expect(lines.length).toBeGreaterThan(2);
+    for (const line of lines) {
+      expect(line.activeCells).toBeLessThanOrEqual(20);
+      expect(line.cells.length).toBe(20);
+    }
+
+    const dev = new MockDevice("braille-line-dev");
+    await dev.connect();
+    const t = new TactileWorkflow();
+    const rendered = await t.renderBrailleLines(dev, "Hello Braille World 2026");
+    expect(rendered.length).toBeGreaterThan(0);
+
+    const reader = new ReaderWorkflow();
+    const pages = reader.paginateByCells(
+      {
+        id: "bdoc",
+        title: "Braille Doc",
+        content:
+          "Refreshable braille displays raise pins in a 2 by 3 cell matrix for tactile reading across multiple lines.",
+      },
+      { cellCount: 20, linesPerPage: 2, mode: "braille" },
+    );
+    expect(pages.length).toBeGreaterThan(2);
+    expect(pages[0].cellCount).toBe(20);
+    expect(pages[0].brailleLines?.length).toBe(2);
+    for (const bl of pages[0].brailleLines ?? []) {
+      expect(bl.length).toBeLessThanOrEqual(20);
+    }
   });
 });

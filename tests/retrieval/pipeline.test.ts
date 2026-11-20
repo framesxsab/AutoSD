@@ -81,4 +81,38 @@ describe("RetrievalPipeline", () => {
     const pipe = new RetrievalPipeline(new MockEmbeddingProvider());
     expect(await pipe.search("anything")).toEqual([]);
   });
+
+  it("mode bm25 returns bm25-only results and supports reranker", async () => {
+    const docs = [
+      { id: "d1", content: "braille display tactile pins" },
+      { id: "d2", content: "cooking pasta recipe ingredients" },
+    ];
+    const pipe = new RetrievalPipeline(new MockEmbeddingProvider(), { topK: 2, mode: "bm25" });
+    await pipe.ingest(docs);
+    const res = await pipe.search("braille tactile");
+    expect(res).toHaveLength(1);
+    expect(res[0].source).toBe("bm25");
+    expect(res[0].chunk.documentId).toBe("d1");
+
+    const rerankedPipe = new RetrievalPipeline(
+      new MockEmbeddingProvider(),
+      { topK: 2, mode: "bm25" },
+      new LexicalReranker(),
+    );
+    await rerankedPipe.ingest(docs);
+    const reranked = await rerankedPipe.search("braille");
+    expect(reranked).toHaveLength(1);
+    expect(reranked[0].source).toBe("rerank");
+  });
+
+  it("mode vector returns vector-only results", async () => {
+    const pipe = new RetrievalPipeline(new MockEmbeddingProvider(), { topK: 2, mode: "vector" });
+    await pipe.ingest([
+      { id: "d1", content: "braille display tactile pins" },
+      { id: "d2", content: "cooking pasta recipe ingredients" },
+    ]);
+    const res = await pipe.search("braille");
+    expect(res).toHaveLength(2);
+    expect(res.every(r => r.source === "vector")).toBe(true);
+  });
 });

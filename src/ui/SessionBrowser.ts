@@ -32,6 +32,7 @@ export class SessionBrowser {
     const heading = document.createElement("h2");
     heading.textContent = `Sessions (${sessions.length})`;
     heading.id = "session-browser-heading";
+    heading.dataset.autosdViewHeading = "true";
     this.container.appendChild(heading);
 
     if (sessions.length === 0) {
@@ -48,6 +49,7 @@ export class SessionBrowser {
 
     for (const s of sessions) {
       const li = document.createElement("li");
+      li.className = "autosd-session-card";
       li.setAttribute("role", "listitem");
       li.tabIndex = 0;
       li.dataset.session = s.id;
@@ -61,6 +63,7 @@ export class SessionBrowser {
       li.appendChild(title);
 
       const meta = document.createElement("div");
+      meta.className = "autosd-session-meta";
       meta.textContent = `${s.results.citations.length} citations · ${Math.round(s.results.confidence * 100)}% · ${s.manifest.version}`;
       meta.setAttribute(
         "aria-label",

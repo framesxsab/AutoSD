@@ -1,0 +1,5 @@
+# Keyboard Navigation and Focus Order
+
+Every interactive widget on a page must be operable solely from a keyboard without requiring specific timing for individual keystrokes. Users who navigate with Tab, Shift+Tab, arrow keys, Enter, or Space rely on a logical tab sequence that matches the visual and reading flow of the document. When modal dialogs or popovers open, keyboard focus should move cleanly into the overlay and return to the triggering control when dismissed, never trapping the operator in an inescapable loop.
+
+Visible focus indicators are mandatory whenever an element receives keyboard focus. Removing default browser outlines without supplying a high-contrast replacement leaves sighted keyboard users unable to locate their position on screen. Good focus rings use at least a two-pixel perimeter with distinct offset from the control edge. Furthermore, custom composite widgets such as toolbars, trees, and virtualized lists should support roving tabindex so arrow keys step internally while Tab moves cleanly to the next landmark.

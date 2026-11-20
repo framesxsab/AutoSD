@@ -14,7 +14,8 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
     if (this.initAttempted) return;
     this.initAttempted = true;
     try {
-      const mod = (await import("@xenova/transformers" as string).catch(() => null)) as unknown as {
+      const pkgName = "@xenova/transformers";
+      const mod = (await import(/* @vite-ignore */ pkgName).catch(() => null)) as unknown as {
         pipeline?: (
           task: string,
           model: string,

@@ -72,14 +72,16 @@ describe("accessibility hardness — synthetic stress (C8.3)", () => {
   });
   it("reduced motion — media query boolean", () => {
     if (!window.matchMedia) {
-      (window as any).matchMedia = (q: string) =>
+      (window as unknown as { matchMedia: (q: string) => MediaQueryList }).matchMedia = (
+        q: string,
+      ) =>
         ({
           matches: false,
           media: q,
           onchange: null,
           addListener: () => {},
           removeListener: () => {},
-        }) as any;
+        }) as unknown as MediaQueryList;
     }
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     expect(typeof media.matches).toBe("boolean");

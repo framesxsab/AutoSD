@@ -2,7 +2,10 @@ import { Workspace } from "../Workspace.js";
 import type { ViewContext } from "../router.js";
 
 export function createWorkspaceView(ctx: ViewContext) {
-  const workspace = new Workspace(ctx.workflow);
+  const workspace = new Workspace(ctx.workflow, {
+    onOpenInReader: selection => ctx.openInReader?.(selection),
+    onMutate: () => ctx.onWorkspaceMutated?.(),
+  });
 
   return {
     root: workspace.getElement(),

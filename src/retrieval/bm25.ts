@@ -18,9 +18,10 @@ function tokenize(text: string): string[] {
 export class BM25Index {
   private k1: number;
   private b: number;
-  private chunks: Chunk[] = [];
-  private docTokens: Map<string, string[]> = new Map();
+  private chunks: Map<string, Chunk> = new Map();
+  private docTermFreqs: Map<string, Map<string, number>> = new Map();
   private docLengths: Map<string, number> = new Map();
+  private totalDocLength = 0;
   private avgLen = 0;
   private docFreq: Map<string, number> = new Map();
   private inverted: Map<string, Set<string>> = new Map();
@@ -35,29 +36,40 @@ export class BM25Index {
   }
 
   addChunk(chunk: Chunk): void {
-    const tokens = tokenize(chunk.content);
-    this.chunks.push(chunk);
-    this.docTokens.set(chunk.id, tokens);
-    this.docLengths.set(chunk.id, tokens.length);
-
-    const seen = new Set<string>();
-    for (const t of tokens) {
-      if (!seen.has(t)) {
-        seen.add(t);
-        this.docFreq.set(t, (this.docFreq.get(t) ?? 0) + 1);
-        if (!this.inverted.has(t)) this.inverted.set(t, new Set());
-        this.inverted.get(t)!.add(chunk.id);
-      }
+    if (this.chunks.has(chunk.id)) {
+      this.removeChunk(chunk.id);
     }
-    this.recalcAvgLen();
+    const tokens = tokenize(chunk.content);
+    this.chunks.set(chunk.id, chunk);
+    this.docLengths.set(chunk.id, tokens.length);
+    this.totalDocLength += tokens.length;
+
+    const tfMap = new Map<string, number>();
+    for (const t of tokens) {
+      tfMap.set(t, (tfMap.get(t) ?? 0) + 1);
+    }
+    this.docTermFreqs.set(chunk.id, tfMap);
+
+    for (const t of tfMap.keys()) {
+      this.docFreq.set(t, (this.docFreq.get(t) ?? 0) + 1);
+      let posting = this.inverted.get(t);
+      if (!posting) {
+        posting = new Set();
+        this.inverted.set(t, posting);
+      }
+      posting.add(chunk.id);
+    }
+    this.avgLen = this.totalDocLength / this.docLengths.size;
   }
 
   removeChunk(chunkId: string): void {
-    this.chunks = this.chunks.filter(c => c.id !== chunkId);
-    const tokens = this.docTokens.get(chunkId) ?? [];
-    // Decrement df for tokens unique to this doc
-    const seen = new Set(tokens);
-    for (const t of seen) {
+    const tfMap = this.docTermFreqs.get(chunkId);
+    if (!tfMap) return;
+    this.chunks.delete(chunkId);
+    const len = this.docLengths.get(chunkId) ?? 0;
+    this.docLengths.delete(chunkId);
+    this.totalDocLength -= len;
+    for (const t of tfMap.keys()) {
       const df = (this.docFreq.get(t) ?? 1) - 1;
       if (df <= 0) {
         this.docFreq.delete(t);
@@ -67,21 +79,20 @@ export class BM25Index {
         this.inverted.get(t)?.delete(chunkId);
       }
     }
-    this.docTokens.delete(chunkId);
-    this.docLengths.delete(chunkId);
-    this.recalcAvgLen();
+    this.docTermFreqs.delete(chunkId);
+    this.avgLen = this.docLengths.size === 0 ? 0 : this.totalDocLength / this.docLengths.size;
   }
 
   size(): number {
-    return this.chunks.length;
+    return this.chunks.size;
   }
 
   search(query: string, topK = 10): { chunk: Chunk; score: number }[] {
     const qTokens = tokenize(query);
-    if (qTokens.length === 0 || this.chunks.length === 0) return [];
+    if (qTokens.length === 0 || this.chunks.size === 0) return [];
 
     const scores = new Map<string, number>();
-    const N = this.chunks.length;
+    const N = this.chunks.size;
 
     for (const qt of qTokens) {
       const df = this.docFreq.get(qt);
@@ -90,37 +101,27 @@ export class BM25Index {
       const posting = this.inverted.get(qt);
       if (!posting) continue;
       for (const chunkId of posting) {
-        const tf = this.docTokens.get(chunkId)!.filter(t => t === qt).length;
-        const dl = this.docLengths.get(chunkId)!;
+        const tf = this.docTermFreqs.get(chunkId)?.get(qt) ?? 0;
+        const dl = this.docLengths.get(chunkId) ?? 0;
         const norm = 1 - this.b + this.b * (dl / (this.avgLen || 1));
         const score = idf * ((tf * (this.k1 + 1)) / (tf + this.k1 * norm));
         scores.set(chunkId, (scores.get(chunkId) ?? 0) + score);
       }
     }
 
-    const chunkMap = new Map(this.chunks.map(c => [c.id, c]));
     return [...scores.entries()]
-      .map(([id, score]) => ({ chunk: chunkMap.get(id)!, score }))
+      .map(([id, score]) => ({ chunk: this.chunks.get(id)!, score }))
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
   }
 
   clear(): void {
-    this.chunks = [];
-    this.docTokens.clear();
+    this.chunks.clear();
+    this.docTermFreqs.clear();
     this.docLengths.clear();
+    this.totalDocLength = 0;
     this.docFreq.clear();
     this.inverted.clear();
     this.avgLen = 0;
-  }
-
-  private recalcAvgLen(): void {
-    if (this.docLengths.size === 0) {
-      this.avgLen = 0;
-      return;
-    }
-    let total = 0;
-    for (const len of this.docLengths.values()) total += len;
-    this.avgLen = total / this.docLengths.size;
   }
 }

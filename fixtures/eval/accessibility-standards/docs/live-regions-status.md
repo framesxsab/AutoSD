@@ -1,0 +1,5 @@
+# Live Regions and Status Announcements
+
+Dynamic web applications frequently update results, save indicators, search counts, or validation banners asynchronously without reloading the document or moving keyboard focus. Screen readers cannot detect silent DOM mutations unless containers announce updates through ARIA live regions. Assigning role="status" with aria-live="polite" instructs assistive software to speak or braille the message during the next natural pause in speech, avoiding jarring interruptions.
+
+Urgent alerts that warn about expiring sessions or destructive failures use role="alert" or aria-live="assertive" sparingly so critical warnings surface immediately. Developers should mount empty live-region containers at initial page load and update their text content later, because screen readers often ignore elements injected simultaneously with both aria-live attributes and text. Announcements ought to stay concise and informative, summarizing counts or completion states rather than dumping verbose HTML fragments or repeating unchanged status strings on every polling cycle.

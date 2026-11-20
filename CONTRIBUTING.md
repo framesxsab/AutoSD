@@ -1,6 +1,6 @@
 # Contributing to AutoSD
 
-Thanks for helping build AutoSD. This guide covers setup, the verification gate, and how to get a change merged. These docs track the current tree (275 tests across 49 files; v1.0.0 was 219/43 — see `evaluation.baseline.json`) and set contributor expectations for the v1.x line.
+Thanks for helping build AutoSD. This guide covers setup, the verification gate, and how to get a change merged. These docs track the current tree (290 tests across 52 files; v1.0.0 was 219/43 — see `evaluation.baseline.json`) and set contributor expectations for the v1.x line.
 
 New here? Read in this order:
 

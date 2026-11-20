@@ -1,0 +1,5 @@
+# Synchronized Captions and Transcripts
+
+Audio and video presentations exclude deaf, hard-of-hearing, and deafblind participants unless time-based media provides synchronized text equivalents. Captions transcribe spoken dialogue verbatim while identifying speaker changes, sound effects, music cues, and off-screen audio events in real time. Prerecorded training clips and live broadcasts alike need accurate synchronization, legible high-contrast lettering, and positioning that avoids obscuring crucial visual diagrams.
+
+Full text transcripts go beyond captions by presenting dialogue and visual context in a single searchable document that screen readers and refreshable braille displays can inspect independently at the reader's preferred pace. For video content where important visual actions, gestures, or on-screen text appear without narration, audio description inserts concise spoken commentary during natural pauses in the primary soundtrack. Combining captions, transcripts, and audio descriptions benefits noisy workplaces, multilingual learners, and automated indexing tools simultaneously.

@@ -215,7 +215,7 @@ With an empty corpus the workflow keeps its v0.3 backward-compatible stub behavi
 | Corpus watching + live sync    | Implemented | Top-level files, `.md` / `.txt` / `.json`                                       |
 | Session persistence + export   | Implemented | `corpus/index.json`, `corpus/sessions.json`                                     |
 | Local ONNX embeddings          | Partial     | `LocalEmbeddingProvider` falls back to mock when transformers.js is unavailable |
-| Recall@k evaluation harness    | Pending     | Roadmap item; no published benchmarks yet                                       |
+| Recall@k quality harness       | Pending     | Roadmap item (v1.1 M1); task harness exists, no quality benchmarks yet          |
 | Networked marketplace installs | Pending     | Catalog is an in-repo fixture today                                             |
 | Plugin sandboxing              | Pending     | Roadmap item                                                                    |
 

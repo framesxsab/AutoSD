@@ -6,3 +6,4 @@ export * from "./reranker.js";
 export * from "./pipeline.js";
 export * from "./snapshot.js";
 export * from "./providers/index.js";
+export * from "./eval/index.js";

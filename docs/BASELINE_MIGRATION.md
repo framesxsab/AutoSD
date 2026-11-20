@@ -29,7 +29,7 @@ How `evaluation.baseline.json` evolves safely. The baseline is versioned evidenc
    - [ ] `taskSetVersion` bumped if tasks changed
    - [ ] `baselineVersion` bumped
    - [ ] PR description states which category (new/changed/removed) and why
-   - [ ] `suiteCounts` updated if tests grew (counts may only grow)
+   - [ ] `suiteCounts` updated if tests grew (counts may only grow; CI enforces the floor via `npm run test:report && npm run test:gate`, and warns when the baseline lags the live suite by more than 10 tests)
    - [ ] `durationsMsAdvisory` refreshed from a verified run if timings shifted
 
 2. **Informative CI failures:** the gate script prints exact ids and the section of this doc to read. Example:

@@ -44,7 +44,9 @@ describe("provider config hardening (C8.4)", () => {
     expect(res.citations.length).toBeGreaterThan(0);
   });
   it("secret redaction — diagnostics never contains raw secret", () => {
-    const fake = { apiKey: "sk-12345", token: "abc", plain: 1 } as any;
+    const fake = { apiKey: "sk-12345", token: "abc", plain: 1 } as unknown as NonNullable<
+      Parameters<typeof collectDiagnostics>[0]
+    >["provider"];
     const sanitized = JSON.stringify(collectDiagnostics({ provider: fake }));
     expect(sanitized).not.toContain("sk-12345");
   });

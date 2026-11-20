@@ -12,7 +12,10 @@ export type WatcherOptions = {
   debounceMs?: number;
   extensions?: string[];
   ignoreDotfiles?: boolean;
+  maxFileBytes?: number;
 };
+
+export const DEFAULT_MAX_WATCHER_FILE_BYTES = 5 * 1024 * 1024; // 5 MiB
 
 /**
  * v0.9 additive: structured error event. `error` is raw — UI layers must
@@ -62,6 +65,10 @@ export class CorpusWatcher {
 
   async start(): Promise<void> {
     if (this.running) return;
+    // Browser builds alias node:fs to an empty module; filesystem watching is
+    // unavailable there, so stay stopped instead of reporting a phantom watcher.
+    const fsPromises = await import("node:fs/promises");
+    if (typeof fsPromises.readdir !== "function") return;
     this.running = true;
     await this.scanInitial();
     try {
@@ -135,7 +142,8 @@ export class CorpusWatcher {
       try {
         const { readFile, stat } = await import("node:fs/promises");
         const st = await stat(full);
-        if (!st.isFile()) continue;
+        const maxBytes = this.opts.maxFileBytes ?? DEFAULT_MAX_WATCHER_FILE_BYTES;
+        if (!st.isFile() || st.size > maxBytes) continue;
         const content = await readFile(full, "utf8");
         const hash = hashContent(content);
         const id = entry.replace(extname(entry), "");

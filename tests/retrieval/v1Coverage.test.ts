@@ -96,13 +96,13 @@ describe("v1.0 hardening — genuine missing branches", () => {
   });
 
   describe("SnapshotIndex persistence edges", () => {
-    it("saveToFile resolves silently when the target directory cannot be created", async () => {
+    it("saveToFile rejects (does not swallow) when the target directory cannot be created", async () => {
       const blocker = join(dir, "blocker.txt");
       await writeFile(blocker, "a file, not a directory", "utf8");
       const idx = new SnapshotIndex();
       await idx.index([{ id: "d1", content: "persist me", path: "/d1.md" }]);
       const before = idx.getChunks().length;
-      await expect(idx.saveToFile(join(blocker, "nested", "index.json"))).resolves.toBeUndefined();
+      await expect(idx.saveToFile(join(blocker, "nested", "index.json"))).rejects.toThrow();
       expect(idx.getChunks()).toHaveLength(before); // state untouched by failed save
     });
 

@@ -46,7 +46,7 @@ Labels vocabulary (matches [../CONTRIBUTING.md](../CONTRIBUTING.md)): `bug` `fea
 
 **Labels:** `feature`, `help wanted`
 
-**Problem:** No retrieval quality numbers exist because the harness does not exist ("Explicitly not started" in [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md)). Any published number today would be fabricated.
+**Problem:** No retrieval quality numbers exist because the quality harness does not exist (the `npm run evaluate` task harness and its T11 hardness subchecks are pass/fail mechanics checks, not recall@k) ("Explicitly not started" in [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md)). Any published number today would be fabricated.
 
 **Scope:**
 

@@ -2,6 +2,11 @@
   "name": "autosd",
   "version": "1.0.0",
   "private": false,
+  "files": [
+    "dist/src",
+    "README.md",
+    "LICENSE"
+  ],
   "description": "AutoSD — plugin-first tactile/research platform with DeviceManager, registry, DI hot-swap, and WCAG 2.2 AA guarantees",
   "license": "MIT",
   "type": "module",
@@ -14,7 +19,7 @@
     "dev": "vite",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --ext .ts,.tsx,.js",
+    "lint": "eslint . --ext .ts,.tsx,.js --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js --fix",
     "format": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.md\"",
     "format:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.md\"",
@@ -22,7 +27,11 @@
     "demo": "node scripts/run-demo.mjs",
     "evaluate": "node scripts/run-evaluation.mjs",
     "evaluate:gate": "node scripts/check-evaluation-baseline.mjs",
+    "eval:quality": "node scripts/run-quality-eval.mjs",
+    "eval:quality:gate": "node scripts/check-quality-baseline.mjs",
     "test:watch": "vitest",
+    "test:report": "vitest run --coverage=false --reporter=default --reporter=json --outputFile=test-results.json",
+    "test:gate": "node scripts/check-suite-counts.mjs test-results.json",
     "verify": "npm run typecheck && npm run lint && npm run format && npm run test && npm run build",
     "verify:release": "node scripts/verify-release.mjs",
     "prepare": "husky install 2>/dev/null || echo \"husky skip\""

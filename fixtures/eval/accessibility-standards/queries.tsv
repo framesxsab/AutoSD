@@ -1,0 +1,17 @@
+# queryId	category	question
+a11y-q01	lexical	normal body copy luminance contrast ratio 4.5 to 1 large text 3.0
+a11y-q02	lexical	minimum target footprint 24 by 24 CSS pixels spacing circle
+a11y-q03	lexical	prefers-reduced-motion media feature three flashes photosensitive seizure
+a11y-q04	lexical	role status aria-live polite screen reader silent DOM mutations
+a11y-q05	paraphrase	preventing dizzy spells from sliding carousel effects and blinking tickers
+a11y-q06	paraphrase	helping blind visitors skip repeating top navigation bars into main content
+a11y-q07	paraphrase	telling someone why an input failed instead of relying on disappearing hint text
+a11y-q08	paraphrase	making custom clickable elements announce open or collapsed state to assistive software
+a11y-q09	typo	lumiance contrst ratio grayscal color-blnd
+a11y-q10	typo	keybord navigaton roving tabindxe visible focuss ring
+a11y-q11	typo	synchornized captins audio descripton transcriptts
+a11y-q12	typo	aria-invalidd error recovry programatic labelss
+a11y-q13	multi-doc	non-visual reading paths for images videos and speech or braille output
+a11y-q14	multi-doc	keyboard usability focus placement and comfortable clickable control geometry
+a11y-q15	multi-doc	how ARIA attributes communicate state updates and widget roles to screen readers
+a11y-q16	multi-doc	designing forms and visual indicators that do not rely on color or placeholder hints

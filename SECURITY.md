@@ -60,5 +60,6 @@ benchmarks are claimed from this audit.
 ## Deployment notes
 
 - The production image serves **static files only** — there is no backend, no database, and no server-side secret storage. Any secret placed in the image would be public by definition; none is.
-- CSP allows `connect-src https://api.openai.com` so users who explicitly inject their own client-side key retain functionality; the shipped bundle contains no key material.
+- CSP restricts `connect-src 'self'` so the browser bundle never communicates directly with `api.openai.com`; security headers are enforced on both `/` and `/assets/*` with `limit_req_zone` rate limiting.
+- Pre-launch security hardening adds private `#apiKey` encapsulation, sliding-window rate & batch limits on `OpenAIEmbeddingProvider` and UI search, file upload size/type validation, `assertSafePath()` path-traversal protection, deep session schema validation, and production lockdown of `window.__AUTOSD__`.
 - Verify deployments with: `npm run verify` (typecheck, lint, format, tests, build).

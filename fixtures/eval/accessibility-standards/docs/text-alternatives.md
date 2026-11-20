@@ -1,0 +1,5 @@
+# Text Alternatives for Non-Text Content
+
+Images, diagrams, charts, icons, and tactile graphics require equivalent text descriptions so non-visual readers receive the same information through speech synthesis or braille output. Simple informative photographs use concise alt attributes explaining the image purpose in context rather than reciting filenames or visual trivia. Complex charts and schematics benefit from short alt summaries paired with structured data tables or long descriptions linked nearby.
+
+Purely decorative borders, spacer graphics, and redundant icons sitting next to visible text labels should carry an empty alt="" attribute or aria-hidden="true" so assistive technologies skip clutter. For audio-only recordings, CAPTCHA controls, or sensory verification gates, accessible alternatives must supply non-visual pathways. Writing meaningful text alternatives also serves tactile display workflows, because software translates plain prose directly into cell patterns when visual graphics cannot be rendered on a single line of pins.

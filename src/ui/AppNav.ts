@@ -20,7 +20,7 @@ function injectNavStyles(): void {
   style.textContent = [
     ".autosd-nav{--autosd-nav-accent:#005fcc;--autosd-nav-accent-contrast:#ffffff;--autosd-nav-hover:#eef2f7;}",
     ".autosd-nav ul{display:flex;flex-wrap:wrap;gap:4px;list-style:none;margin:0;padding:0;}",
-    ".autosd-nav a{display:inline-block;min-height:24px;padding:8px 12px;border-radius:6px;text-decoration:none;color:inherit;font-weight:500;transition:background-color 120ms ease,color 120ms ease;}",
+    ".autosd-nav a{display:inline-flex;align-items:center;min-height:36px;padding:8px 12px;border-radius:6px;text-decoration:none;color:inherit;font-weight:500;transition:background-color 120ms ease,color 120ms ease;}",
     ".autosd-nav a:hover{background:var(--autosd-nav-hover);}",
     ".autosd-nav a[aria-current='page']{background:var(--autosd-nav-accent);color:var(--autosd-nav-accent-contrast);}",
     ".autosd-nav.autosd-reduced-motion a{transition:none;}",

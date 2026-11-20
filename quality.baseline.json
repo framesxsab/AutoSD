@@ -1,0 +1,56 @@
+{
+  "baseline": "autosd-retrieval-quality-baseline",
+  "baselineVersion": 1,
+  "schemaId": "autosd-retrieval-quality",
+  "schemaVersion": 1,
+  "judgmentProvenance": "maintainer-authored-provisional",
+  "absTolerance": 0.02,
+  "corpusHashes": {
+    "accessibility-standards": "a794f5fca598396c",
+    "demo": "9f19bb896067180e",
+    "tactile-history": "f434149ada8f5acc"
+  },
+  "qrelsHashes": {
+    "accessibility-standards": "81df2657b8758a4f",
+    "demo": "2ba53c7814b7c6c0",
+    "tactile-history": "8781f078e6536d29"
+  },
+  "macroOverall": {
+    "bm25": {
+      "recallAt5": 0.8993,
+      "recallAt10": 0.8993,
+      "mrrAt10": 0.9305,
+      "ndcgAt10": 0.9124
+    },
+    "vector:mock": {
+      "recallAt5": 0.7257,
+      "recallAt10": 0.8489,
+      "mrrAt10": 0.5856,
+      "ndcgAt10": 0.5799
+    },
+    "hybrid:mock": {
+      "recallAt5": 0.9028,
+      "recallAt10": 0.9531,
+      "mrrAt10": 0.9156,
+      "ndcgAt10": 0.8624
+    },
+    "vector:lexical-hash": {
+      "recallAt5": 0.9288,
+      "recallAt10": 0.9844,
+      "mrrAt10": 0.9052,
+      "ndcgAt10": 0.8915
+    },
+    "hybrid:lexical-hash": {
+      "recallAt5": 0.9254,
+      "recallAt10": 0.9792,
+      "mrrAt10": 0.9549,
+      "ndcgAt10": 0.9495
+    },
+    "hybrid:lexical-hash+rerank": {
+      "recallAt5": 0.9149,
+      "recallAt10": 0.9844,
+      "mrrAt10": 0.9896,
+      "ndcgAt10": 0.9721
+    }
+  }
+}

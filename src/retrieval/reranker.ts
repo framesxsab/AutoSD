@@ -15,13 +15,17 @@ export class EmbeddingReranker implements Reranker {
 
   async rerank(query: string, results: RetrievalResult[], topK = 10): Promise<RetrievalResult[]> {
     if (results.length === 0) return [];
-    const queryVec = await this.provider.embed(query);
+    const inputs = [query, ...results.map(r => r.chunk.content)];
+    const vectors =
+      typeof this.provider.embedMany === "function"
+        ? await this.provider.embedMany(inputs)
+        : await Promise.all(inputs.map(t => this.provider.embed(t)));
+    const queryVec = vectors[0] ?? (await this.provider.embed(query));
 
-    // We need chunk embeddings; if results already have hybrid scores, we recompute
-    // vector similarity from scratch using provider as ground truth for rerank.
+    // Recompute vector similarity from batched embeddings for rerank.
     const scored = await Promise.all(
-      results.map(async r => {
-        const chunkVec = await this.provider.embed(r.chunk.content);
+      results.map(async (r, idx) => {
+        const chunkVec = vectors[idx + 1] ?? (await this.provider.embed(r.chunk.content));
         const sim = cosineSimilarity(queryVec, chunkVec);
         return {
           ...r,

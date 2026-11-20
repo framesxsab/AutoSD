@@ -81,5 +81,18 @@ describe("ResearchWorkflow retrieval", () => {
     wf.setEmbeddingProvider(new MockEmbeddingProvider());
     const res = await wf.run({ id: "q1", question: "hello" });
     expect(res).toBeDefined();
+    expect(res.citations.length).toBeGreaterThan(0);
+    expect(res.citations[0].documentId).toBe("d1");
+  });
+
+  it("honors custom topK option in run()", async () => {
+    const wf = new ResearchWorkflow({ provider: new MockEmbeddingProvider(), topK: 7 });
+    const docs = Array.from({ length: 8 }, (_, i) => ({
+      id: `doc-${i + 1}`,
+      content: `tactile braille refreshable display unit ${i + 1}`,
+    }));
+    await wf.ingest(docs);
+    const res = await wf.run({ id: "q-topk", question: "braille display" });
+    expect(res.citations).toHaveLength(7);
   });
 });

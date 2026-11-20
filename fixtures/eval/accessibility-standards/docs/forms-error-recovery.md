@@ -1,0 +1,5 @@
+# Form Labels and Error Recovery
+
+Accessible data entry starts with programmatic associations connecting every input, select menu, and slider to an explicit label element via matching for and id attributes or descriptive aria-label properties. Placeholder text inside an empty field is never an adequate substitute for a persistent visible label, because placeholders vanish once typing begins and frequently fail minimum contrast requirements.
+
+When submission validation detects missing or malformed values, software must identify the offending fields in plain text and bind error messages with aria-describedby and aria-invalid="true". Helpful error recovery explains exactly how to fix the mistake, such as noting an expected date pattern or valid numeric range, without blaming the user. Forms handling financial transactions, legal commitments, or bulk deletions should make actions reversible, validate entries before final confirmation, or let reviewers inspect and edit previous steps without losing already entered fields.

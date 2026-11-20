@@ -5,7 +5,7 @@ import { escapeHtml } from "../utils/sanitize.js";
 export type CitationOpenHandler = (citation: ResearchCitation) => void;
 
 export function renderCitation(c: ResearchCitation, confidence: number): string {
-  const pct = Math.round(confidence * 100);
+  const pct = escapeHtml(Math.round(confidence * 100));
   // Security: every interpolated value is escaped — ids may come from
   // untrusted filenames and must not be able to break out of attributes.
   const chunkId = escapeHtml(c.chunkId);
@@ -21,7 +21,7 @@ export function renderCitation(c: ResearchCitation, confidence: number): string 
 
 export function renderCitations(result: ResearchResult, _onOpen?: CitationOpenHandler): string {
   const items = result.citations.map(c => renderCitation(c, result.confidence)).join("");
-  const pct = Math.round(result.confidence * 100);
+  const pct = escapeHtml(Math.round(result.confidence * 100));
   return (
     `<section aria-label="Grounded citations" role="region">` +
     `<h3>Citations — confidence ${pct}%</h3>` +
@@ -48,6 +48,7 @@ export function createCitationList(
 
   result.citations.forEach((c, idx) => {
     const li = document.createElement("li");
+    li.className = "autosd-citation-item";
     li.setAttribute("role", "listitem");
     li.tabIndex = 0;
     li.dataset.chunk = c.chunkId;
@@ -60,7 +61,16 @@ export function createCitationList(
     const targetAudit = auditTargetSize(120, 32);
     if (!targetAudit.passed) li.setAttribute("data-a11y-warn", targetAudit.message);
 
-    li.innerHTML = `<strong>${escapeHtml(c.documentId)}</strong> <code>${escapeHtml(c.chunkId)}</code> <span>${Math.round(c.score * 100) / 100}</span><p>${escapeHtml(c.content)}</p>`;
+    // Security: build DOM nodes directly via textContent (never innerHTML).
+    const strong = document.createElement("strong");
+    strong.textContent = c.documentId;
+    const code = document.createElement("code");
+    code.textContent = c.chunkId;
+    const scoreSpan = document.createElement("span");
+    scoreSpan.textContent = String(Math.round(c.score * 100) / 100);
+    const bodyP = document.createElement("p");
+    bodyP.textContent = c.content;
+    li.append(strong, " ", code, " ", scoreSpan, bodyP);
 
     const activate = () => {
       const msg = createLiveRegion(`Opened citation ${c.chunkId}`);

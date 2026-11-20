@@ -1,0 +1,5 @@
+# Assistive Technology Interoperability
+
+Custom interactive widgets work reliably with screen readers, voice dictation tools, and refreshable braille displays only when software exposes accurate name, role, value, and state metadata through the browser accessibility tree. Native semantic HTML elements such as button, anchor, input, and details supply this contract automatically, whereas generic div or span clickable controls fail unless developers implement full ARIA roles, keyboard bindings, and state synchronization.
+
+For example, an expandable accordion panel needs aria-expanded toggling between true and false alongside aria-controls pointing to the panel id, while custom tabs require tablist, tab, and tabpanel roles with aria-selected state. Assistive software reads these structured properties from operating system accessibility APIs and translates active focus labels into speech and braille cells simultaneously. Consistent semantic exposure eliminates brittle screen scraping and lets plugins compose cleanly across devices.

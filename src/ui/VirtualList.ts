@@ -19,6 +19,7 @@ export class VirtualList<T> {
       renderItem: opts.renderItem,
     };
     this.container = document.createElement("div");
+    this.container.className = "autosd-virtual-list";
     this.container.setAttribute("role", "list");
     this.container.setAttribute("aria-label", "Virtualized results");
     this.container.style.height = `${this.opts.containerHeight}px`;
@@ -71,7 +72,10 @@ export class VirtualList<T> {
 
     for (let i = start; i < end; i++) {
       const el = this.opts.renderItem(this.items[i], i);
+      el.classList.add("autosd-virtual-list__item");
       el.style.position = "relative";
+      el.style.minHeight = `${this.opts.itemHeight}px`;
+      el.style.boxSizing = "border-box";
       if (!el.hasAttribute("role")) el.setAttribute("role", "listitem");
       el.setAttribute("aria-posinset", String(i + 1));
       el.setAttribute("aria-setsize", String(this.items.length));

@@ -58,16 +58,14 @@ function checkNode() {
 
 /** T01 probe: run the real e2e smoke suite (mounts the actual app under jsdom). */
 function runVitestSuite(suitePath, label, timeoutMs = 240_000) {
-  const started = Date.now();
   const npxBin = process.platform === "win32" ? "npx.cmd" : "npx";
   const res = spawnSync(npxBin, ["vitest", "run", suitePath], {
     encoding: "utf8",
     timeout: timeoutMs,
     shell: process.platform === "win32",
   });
-  const durationMs = Date.now() - started;
-  // Timing is reported via durationMs fields only, keeping artifact diffs
-  // reducible to a single `"durationMs": N` normalization rule.
+  // Timing is reported by the caller's per-task durationMs fields only, keeping
+  // artifact diffs reducible to a single `"durationMs": N` normalization rule.
   if (res.status === 0) {
     return { ok: true, detail: `${label} green` };
   }
@@ -156,17 +154,16 @@ async function main() {
       return;
     }
 
-  // ---- run mode ------------------------------------------------------------
-  // Normalize user-supplied ids ("T03", "T03-RET…", or exact) against the
-  // engine's canonical task registry so shorthand always matches.
-  const expandTaskId = raw =>
-    mod.TASK_IDS.filter(id => id === raw || id.startsWith(raw));
-  const forcedIds = [...new Set(forceFailTaskIds.flatMap(expandTaskId))];
-  if (forceFailTaskIds.length > 0) {
-    console.error(
-      `[selftest] forcing failure of: ${forcedIds.length > 0 ? forcedIds.join(", ") : "(no matching tasks!)"}`,
-    );
-  }
+    // ---- run mode ------------------------------------------------------------
+    // Normalize user-supplied ids ("T03", "T03-RET…", or exact) against the
+    // engine's canonical task registry so shorthand always matches.
+    const expandTaskId = raw => mod.TASK_IDS.filter(id => id === raw || id.startsWith(raw));
+    const forcedIds = [...new Set(forceFailTaskIds.flatMap(expandTaskId))];
+    if (forceFailTaskIds.length > 0) {
+      console.error(
+        `[selftest] forcing failure of: ${forcedIds.length > 0 ? forcedIds.join(", ") : "(no matching tasks!)"}`,
+      );
+    }
     console.error(`AutoSD independent evaluation — app v${mod.APP_VERSION}`);
 
     const { report } = await mod.runSoftwareEvaluation({

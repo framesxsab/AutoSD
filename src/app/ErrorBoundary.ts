@@ -24,6 +24,8 @@ export class ErrorBoundary {
   private readonly label: string;
   private fallback: HTMLElement | null = null;
   private installed = false;
+  private onWindowError: ((event: ErrorEvent) => void) | null = null;
+  private onWindowRejection: ((event: PromiseRejectionEvent) => void) | null = null;
   private lastError: SanitizedSummary | null = null;
 
   constructor(opts: ErrorBoundaryOptions) {
@@ -36,20 +38,32 @@ export class ErrorBoundary {
   installGlobalHandlers(): () => void {
     if (this.installed) return () => this.uninstallGlobalHandlers();
     this.installed = true;
-    const onError = (event: ErrorEvent): void => {
+    this.onWindowError = (event: ErrorEvent): void => {
       // External script errors carry no useful message; avoid noisy repeats.
       this.show(event.error ?? new Error(redactUnknown(event.message)));
     };
-    const onRejection = (event: PromiseRejectionEvent): void => {
+    this.onWindowRejection = (event: PromiseRejectionEvent): void => {
       this.show(event.reason);
     };
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener("error", this.onWindowError);
+    window.addEventListener("unhandledrejection", this.onWindowRejection);
     return () => this.uninstallGlobalHandlers();
   }
 
+  /** Whether window-level handlers are currently attached. */
+  get hasGlobalHandlers(): boolean {
+    return this.installed;
+  }
+
   private uninstallGlobalHandlers(): void {
-    /* handlers are bound per-install; retained for symmetry/testing */
+    if (!this.installed) return;
+    if (this.onWindowError) window.removeEventListener("error", this.onWindowError);
+    if (this.onWindowRejection) {
+      window.removeEventListener("unhandledrejection", this.onWindowRejection);
+    }
+    this.onWindowError = null;
+    this.onWindowRejection = null;
+    this.installed = false;
   }
 
   /** Run a synchronous operation; on throw, show fallback and return null. */

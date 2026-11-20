@@ -1,5 +1,6 @@
 import type { Chunk, Document, IndexManifest, DocumentManifestEntry } from "./types.js";
 import { chunkDocument, hashContent } from "./chunker.js";
+import { assertSafePath, safeJsonParse } from "../utils/sanitize.js";
 
 export function hashDocument(doc: Document): string {
   return hashContent(doc.content);
@@ -163,9 +164,22 @@ export class SnapshotIndex {
     chunks: Chunk[];
     manifests: IndexManifest[];
   }): void {
-    this.version = state.version;
-    this.documentHashes = new Map(Object.entries(state.documentHashes));
-    this.allChunks = [...state.chunks];
+    this.version = typeof state.version === "string" ? state.version : "0.0.0";
+    this.documentHashes = new Map(
+      Object.entries(state.documentHashes ?? {}).filter(
+        ([k, v]) => k !== "__proto__" && k !== "constructor" && typeof v === "string",
+      ),
+    );
+    this.allChunks = Array.isArray(state.chunks)
+      ? state.chunks.filter(
+          c =>
+            Boolean(c) &&
+            typeof c === "object" &&
+            typeof c.id === "string" &&
+            typeof c.documentId === "string" &&
+            typeof c.content === "string",
+        )
+      : [];
     this.chunksByDoc.clear();
     for (const c of this.allChunks) {
       const arr = this.chunksByDoc.get(c.documentId) ?? [];
@@ -173,40 +187,68 @@ export class SnapshotIndex {
       this.chunksByDoc.set(c.documentId, arr);
     }
     this.manifests.clear();
-    for (const m of state.manifests) this.manifests.set(m.version, m);
+    if (Array.isArray(state.manifests)) {
+      for (const m of state.manifests) {
+        if (m && typeof m === "object" && typeof m.version === "string") {
+          this.manifests.set(m.version, m);
+        }
+      }
+    }
   }
 
+  /**
+   * Atomically persist full state (tmp file + rename). Resolves without writing
+   * when `node:fs` is the empty browser alias; real path-validation and I/O
+   * failures (EACCES, ENOSPC, ENOTDIR, …) reject so callers can surface them.
+   */
   async saveToFile(filePath = "corpus/index.json"): Promise<void> {
-    try {
-      const { mkdir, writeFile, rename } = await import("node:fs/promises");
-      const { dirname } = await import("node:path");
-      await mkdir(dirname(filePath), { recursive: true });
-      const state = this.toPersistedState();
-      const content = JSON.stringify(state, null, 2);
-      const tmp = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).slice(2)}`;
-      await writeFile(tmp, content, "utf8");
-      await rename(tmp, filePath);
-    } catch {
-      return;
-    }
+    const safePath = assertSafePath(filePath);
+    const fs = await import("node:fs/promises");
+    if (typeof fs.writeFile !== "function") return;
+    const { dirname } = await import("node:path");
+    await fs.mkdir(dirname(safePath), { recursive: true });
+    const content = JSON.stringify(this.toPersistedState(), null, 2);
+    const tmp = `${safePath}.tmp.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+    await fs.writeFile(tmp, content, "utf8");
+    await fs.rename(tmp, safePath);
   }
 
   async loadFromFile(filePath = "corpus/index.json"): Promise<boolean> {
     try {
+      const safePath = assertSafePath(filePath);
       const { readFile } = await import("node:fs/promises");
-      const raw = await readFile(filePath, "utf8");
-      const parsed = JSON.parse(raw);
+      const raw = await readFile(safePath, "utf8");
+      const parsed = safeJsonParse<Record<string, unknown>>(
+        raw,
+        (v): v is Record<string, unknown> => typeof v === "object" && v !== null,
+      );
+      if (!parsed) return false;
       // Support both legacy manifest-only and new full-state format
-      if (parsed.manifests && parsed.documentHashes) {
-        this.fromPersistedState(parsed);
+      if (
+        Array.isArray(parsed.manifests) &&
+        parsed.documentHashes &&
+        typeof parsed.documentHashes === "object"
+      ) {
+        this.fromPersistedState(
+          parsed as unknown as {
+            version: string;
+            documentHashes: Record<string, string>;
+            chunks: Chunk[];
+            manifests: IndexManifest[];
+          },
+        );
         return true;
       }
-      if (parsed.version && parsed.documents) {
+      if (typeof parsed.version === "string" && Array.isArray(parsed.documents)) {
         // Legacy manifest-only file — hydrate minimal state
-        const m = parsed as IndexManifest;
+        const m = parsed as unknown as IndexManifest;
         this.version = m.version;
         this.manifests.set(m.version, m);
-        for (const d of m.documents) this.documentHashes.set(d.id, d.hash);
+        for (const d of m.documents) {
+          if (d && typeof d.id === "string" && typeof d.hash === "string") {
+            this.documentHashes.set(d.id, d.hash);
+          }
+        }
         return true;
       }
       return false;

@@ -13,6 +13,7 @@ import { OpenAIEmbeddingProvider } from "../retrieval/providers/OpenAIEmbeddingP
 import type { DeviceManager } from "../core/DeviceManager.js";
 import type { DeviceInfo } from "../core/Device.js";
 import type { LiveSync, SyncStatus } from "./LiveSync.js";
+import { redact } from "./logger.js";
 
 export const APP_VERSION: string = packageJson.version;
 
@@ -192,7 +193,8 @@ function collectEnvironment(): EnvironmentDiagnostics {
 export function sanitize(value: unknown, depth = 0): unknown {
   if (value === null || value === undefined) return null;
   const t = typeof value;
-  if (t === "string" || t === "number" || t === "boolean") return value;
+  if (t === "string") return redact(value);
+  if (t === "number" || t === "boolean") return value;
   if (t === "function" || t === "symbol" || t === "bigint") return `[${t}]`;
   if (depth > 8) return "[truncated]";
   if (Array.isArray(value)) return value.map(v => sanitize(v, depth + 1));
@@ -213,17 +215,23 @@ export function sanitize(value: unknown, depth = 0): unknown {
 
 /** Collect a safe diagnostics snapshot. All inputs optional; never throws. */
 export function collectDiagnostics(input: DiagnosticsInput = {}): DiagnosticsReport {
+  let provider = input.provider ?? null;
+  if (!provider && input.workflow && typeof input.workflow.getProvider === "function") {
+    try {
+      provider = input.workflow.getProvider();
+    } catch {}
+  }
   return sanitize({
     version: APP_VERSION,
     build: getBuildVersion(),
-    provider: collectProvider(input.provider),
+    provider: collectProvider(provider),
     device: collectActiveDevice(input.deviceManager),
     corpus: collectCorpus(input.workflow),
     watcher: collectWatcher(input.liveSync),
     indexing: collectIndexing(input.liveSync),
     services: {
       hidAvailable: isHidAvailable(input.deviceManager),
-      openAIConfigured: isOpenAIConfigured(input.provider),
+      openAIConfigured: isOpenAIConfigured(provider),
     },
     environment: collectEnvironment(),
     generatedAt: new Date().toISOString(),

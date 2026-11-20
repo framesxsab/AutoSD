@@ -1,0 +1,5 @@
+# Charles Barbier and Twelve-Dot Night Writing
+
+Before Louis Braille simplified tactile writing to six dots, French artillery captain Charles Barbier de la Serre invented ecriture nocturne around 1815 for silent battlefield communication in complete darkness. Soldiers could read orders embossed onto thick cardboard strips without lighting a lantern that would betray their position to enemy observers.
+
+Barbier arranged symbols inside a tall six-row by two-column twelve-dot grid that encoded phonetic sounds rather than standard spelling. Each vertical column indicated a row and column index within a thirty-six sound table, letting riders punch messages with a handheld stylus and slate. Although ingenious, the twelve-dot rectangle proved taller than an average fingertip pad, forcing readers to slide their fingers vertically before recognizing each character. When Barbier demonstrated his slate in Paris, Louis Braille studied the embossing hardware and recognized that cutting the matrix height in half unlocked fluent word reading.

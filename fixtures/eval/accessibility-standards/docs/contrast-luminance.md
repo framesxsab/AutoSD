@@ -1,0 +1,5 @@
+# Contrast and Relative Luminance
+
+Readable visual interfaces maintain sufficient contrast between foreground characters and background surfaces so people with low vision, color deficiency, or glare exposure can distinguish text without strain. Under standard accessibility guidelines, normal body copy requires a luminance contrast ratio of at least 4.5 to 1 against its immediate backdrop. Large text, defined as 18 point regular weight or 14 point bold weight, lowers this threshold to 3.0 to 1 because thicker glyph strokes improve legibility.
+
+Relative luminance measures perceived brightness on a normalized scale from 0 for pure black to 1 for pure white using linearized sRGB channel weights. Designers should not rely on hue alone to convey warnings, chart series, or active state; pairing distinct patterns, icons, or underlined labels ensures grayscale displays and color-blind readers interpret meaning reliably. User interface boundaries, focus outlines, and icon buttons likewise require at least 3.0 to 1 contrast against adjacent colors.
