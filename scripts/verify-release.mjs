@@ -18,7 +18,7 @@
  *   npm run verify:release -- --skip-build  # reuse an existing dist-app/ while iterating
  */
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -160,10 +160,31 @@ async function main() {
 
   try {
     await waitForReadiness();
+    rmSync(REPORT_PATH, { force: true });
+    const auditStartedAt = Date.now();
     const lhStatus = runLighthouse();
     if (lhStatus !== 0) {
-      console.error("verify-release: lighthouse audit failed to run");
-      process.exit(lhStatus);
+      let recoveredFreshReport = false;
+      if (process.platform === "win32" && existsSync(REPORT_PATH)) {
+        try {
+          const st = statSync(REPORT_PATH);
+          if (st.mtimeMs >= auditStartedAt - 1000 && st.size > 0) {
+            const parsed = JSON.parse(readFileSync(REPORT_PATH, "utf8"));
+            if (parsed?.categories?.accessibility && parsed?.categories?.performance) {
+              recoveredFreshReport = true;
+              console.warn(
+                "verify-release: lighthouse wrote a valid report before Windows chrome-launcher temp cleanup threw EBUSY — continuing to gate check",
+              );
+            }
+          }
+        } catch {
+          recoveredFreshReport = false;
+        }
+      }
+      if (!recoveredFreshReport) {
+        console.error("verify-release: lighthouse audit failed to run");
+        process.exit(lhStatus);
+      }
     }
 
     const { scores, failures } = await evaluateLighthouseReport(REPORT_PATH);
@@ -179,6 +200,7 @@ async function main() {
     exiting = true;
     stopPreview(preview);
   }
+  process.exit(0);
 }
 
 main().catch((err) => {

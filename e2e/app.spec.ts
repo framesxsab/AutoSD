@@ -155,4 +155,81 @@ test.describe("AutoSD real-browser E2E suite (M6)", () => {
     });
     expect(pageErrors).toEqual([]);
   });
+
+  test("renders hostile XSS payloads strictly as text across Workspace and Reader without execution", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", err => pageErrors.push(err.message));
+
+    await page.goto("/#/workspace");
+    await page.getByText("Add or paste document").click();
+    await page.getByLabel("Document title").fill("XSS Probe");
+    await page
+      .getByLabel("Document content")
+      .fill(
+        'Safe text <img src=x onerror="window.__autosdXss=1"><script>window.__autosdXss=2</script> end',
+      );
+    await page.getByRole("button", { name: "Add document" }).click();
+
+    await expect(page.getByRole("button", { name: "Open xss-probe in Reader" })).toBeVisible();
+    expect(await page.locator("main img").count()).toBe(0);
+    expect(
+      await page.evaluate(() => (window as unknown as { __autosdXss?: unknown }).__autosdXss),
+    ).toBeUndefined();
+
+    await page.getByRole("button", { name: "Open xss-probe in Reader" }).click();
+    await expect(page).toHaveURL(/#\/reader$/);
+    await expect(page.locator('article[aria-current="page"]')).toContainText("Safe text");
+    expect(await page.locator("main img").count()).toBe(0);
+    expect(
+      await page.evaluate(() => (window as unknown as { __autosdXss?: unknown }).__autosdXss),
+    ).toBeUndefined();
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("handles empty-query and empty-corpus Research edge states cleanly", async ({ page }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", err => pageErrors.push(err.message));
+
+    await page.goto("/#/research");
+    // Whitespace-only query is ignored cleanly
+    await page.getByLabel("Research question").fill("   ");
+    await page.getByRole("button", { name: "Run research" }).click();
+    await expect(page.locator(".autosd-results-panel")).toContainText(
+      "Run a query to see grounded results.",
+    );
+
+    // Valid query on empty/starter corpus completes cleanly without errors
+    await page.getByLabel("Research question").fill("quantum banana zeppelin nonexistent");
+    await page.getByRole("button", { name: "Run research" }).click();
+    await expect(page.locator(".autosd-results-panel")).not.toContainText(
+      "Run a query to see grounded results.",
+    );
+    expect(pageErrors).toEqual([]);
+  });
+
+  test("Devices route provisions VirtualDevice, renders custom Braille, and logs HID input simulations", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", err => pageErrors.push(err.message));
+
+    await page.goto("/#/devices");
+    await page.getByLabel("Virtual device cell count").selectOption("20");
+    await page.getByRole("button", { name: "Add virtual device" }).click();
+
+    await page.getByLabel("Custom tactile text").fill("Hello Braille");
+    await page.getByRole("button", { name: "Render to active device" }).click();
+    await expect(page.locator(".autosd-tactile-preview")).toContainText("dots active");
+
+    await page.getByRole("button", { name: "Simulate pan right" }).click();
+    await page.getByRole("button", { name: "Simulate routing cell 1" }).click();
+
+    const logList = page.getByRole("list", { name: "Device event entries" });
+    await expect(logList).toContainText("[display]");
+    await expect(logList).toContainText("pan-right");
+    await expect(logList).toContainText("routing cell 1");
+    expect(pageErrors).toEqual([]);
+  });
 });
