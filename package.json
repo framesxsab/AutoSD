@@ -21,9 +21,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx,.js --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.tsx,.js --fix",
-    "format": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.md\"",
-    "format:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"*.md\"",
+    "format": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"e2e/**/*.{ts,tsx}\" \"*.md\"",
+    "format:fix": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\" \"e2e/**/*.{ts,tsx}\" \"*.md\"",
     "test": "vitest run --coverage=false",
+    "test:e2e": "playwright test",
     "demo": "node scripts/run-demo.mjs",
     "evaluate": "node scripts/run-evaluation.mjs",
     "evaluate:gate": "node scripts/check-evaluation-baseline.mjs",
@@ -37,6 +38,7 @@
     "prepare": "husky install 2>/dev/null || echo \"husky skip\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.3.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

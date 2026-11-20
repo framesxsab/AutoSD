@@ -3,10 +3,10 @@ import tsParser from "@typescript-eslint/parser";
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", ".codegraph/**", ".omo/**", "coverage/**"]
+    ignores: ["dist/**", "dist-app/**", "node_modules/**", ".codegraph/**", ".omo/**", "coverage/**", "playwright-report/**", "test-results/**"]
   },
   {
-    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}", "vite.config.ts", "vitest.config.ts"],
+    files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "e2e/**/*.{ts,tsx}", "scripts/**/*.{js,mjs,ts}", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
