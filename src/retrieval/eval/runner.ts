@@ -3,6 +3,7 @@ import { RetrievalPipeline, type RetrievalMode } from "../pipeline.js";
 import type { EmbeddingProvider } from "../embedder.js";
 import { MockEmbeddingProvider } from "../providers/MockEmbeddingProvider.js";
 import { LexicalHashEmbeddingProvider } from "../providers/LexicalHashEmbeddingProvider.js";
+import { LocalEmbeddingProvider } from "../providers/LocalEmbeddingProvider.js";
 import { LexicalReranker, type Reranker } from "../reranker.js";
 import type { Document } from "../types.js";
 import {
@@ -136,6 +137,33 @@ export const DEFAULT_QUALITY_CONFIGS: readonly QualityEvalConfig[] = [
     createReranker: () => new LexicalReranker(),
   },
 ];
+
+/**
+ * Opt-in M3 quality configs for benchmarking LocalEmbeddingProvider (ONNX
+ * transformers.js when installed, or fallback) alongside DEFAULT_QUALITY_CONFIGS.
+ */
+export function createLocalQualityConfigs(
+  createLocalProvider: () => EmbeddingProvider = () => new LocalEmbeddingProvider(),
+): readonly QualityEvalConfig[] {
+  return [
+    {
+      id: "vector:local",
+      mode: "vector",
+      createProvider: createLocalProvider,
+    },
+    {
+      id: "hybrid:local",
+      mode: "hybrid",
+      createProvider: createLocalProvider,
+    },
+    {
+      id: "hybrid:local+rerank",
+      mode: "hybrid",
+      createProvider: createLocalProvider,
+      createReranker: () => new LexicalReranker(),
+    },
+  ];
+}
 
 function summarizeRows(
   rows: readonly QueryScoreRow[],

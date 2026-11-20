@@ -4,6 +4,7 @@
  *
  * Modes:
  *   node scripts/run-quality-eval.mjs                 # evaluate all frozen corpora
+ *   node scripts/run-quality-eval.mjs --include-local # also evaluate LocalEmbeddingProvider (M3)
  *   node scripts/run-quality-eval.mjs --out-dir <dir> # custom output directory
  *   node scripts/run-quality-eval.mjs --stamp         # include generatedAt timestamp
  */
@@ -20,6 +21,7 @@ const hasFlag = name => args.includes(name);
 
 const outDir = flag("--out-dir") ?? args.find(a => !a.startsWith("-")) ?? "evaluation-output";
 const stamp = hasFlag("--stamp");
+const includeLocal = hasFlag("--include-local");
 
 async function loadCorporaFromNode(mod, rootDir = "fixtures/eval") {
   const entries = await readdir(rootDir, { withFileTypes: true });
@@ -60,8 +62,21 @@ async function main() {
   try {
     const mod = await server.ssrLoadModule("/src/retrieval/eval/runner.js");
     const corpora = await loadCorporaFromNode(mod);
+    let configs = mod.DEFAULT_QUALITY_CONFIGS;
+    if (includeLocal) {
+      const localMod = await server.ssrLoadModule(
+        "/src/retrieval/providers/LocalEmbeddingProvider.js",
+      );
+      const sharedLocal = new localMod.LocalEmbeddingProvider();
+      await sharedLocal.embed("warmup");
+      console.log(
+        `LocalEmbeddingProvider backend: ${sharedLocal.getBackend()} (model: ${sharedLocal.getOnnxModel()})`,
+      );
+      configs = [...mod.DEFAULT_QUALITY_CONFIGS, ...mod.createLocalQualityConfigs(() => sharedLocal)];
+    }
     const report = await mod.runQualityEval({
       corpora,
+      configs,
       ...(stamp ? { stamp: true } : {}),
     });
     const markdown = mod.buildQualityMarkdown(report);
