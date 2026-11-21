@@ -5,7 +5,7 @@
 - Zero runtime dependencies. Node built-ins only, aliased out for the browser build.
 - Deterministic by default: the bundled demo runs offline with no API key and no hardware.
 - Accessibility treated as a structural guarantee, not a feature flag: one shared WCAG 2.2 AA gate.
-- Verified state: 360 unit/integration tests across 61 files (`npm test`) plus 4 real-browser Playwright E2E tests (`npm run test:e2e`), all green. The v1.0.0 tree was 219/43; added evaluation, hardening, retrieval-quality, M3 local ONNX, M4 UEB Grade 1/2 braille, and M6 E2E tests grew the suite (see `evaluation.baseline.json` `suiteCounts`).
+- Verified state: 372 unit/integration tests across 65 files (`npm test`) plus 8 real-browser Playwright E2E tests (`npm run test:e2e`), all green. The v1.0.0 tree was 219/43; added evaluation, hardening, retrieval-quality, M3 local ONNX, M4 UEB Grade 1/2 braille, M6 E2E, scale/adversarial evals, stdio MCP server, and local telemetry tests grew the suite (see `evaluation.baseline.json` `suiteCounts`).
 
 | Documentation                                                      |                                                                                           |
 | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
@@ -322,6 +322,14 @@ Larger context lives in [PRD.md](PRD.md) section 14.
 ## Release notes
 
 Every claim in these notes follows the status language of [docs/CAPABILITY_MATRIX.md](docs/CAPABILITY_MATRIX.md): IMPLEMENTED, SOFTWARE-VALIDATED, HARDWARE-DEPENDENT, USER-VALIDATION-PENDING. Nothing here implies tactile output has been validated with human readers, because it has not.
+
+### v1.2.0
+
+- **Zero-dependency local stdio MCP server (`autosd-mcp`, SOFTWARE-VALIDATED)**: JSON-RPC 2.0 MCP server (`src/mcp/server.ts`, `scripts/autosd-mcp.mjs`, [docs/MCP_SERVER.md](docs/MCP_SERVER.md)) exposing `autosd_ingest`, `autosd_search`, `autosd_list_documents`, `autosd_encode_braille`, and `autosd_decode_braille` with optional `--corpus` preload and zero network calls.
+- **Low-evidence abstention guard & UI (SOFTWARE-VALIDATED)**: opt-in `abstainOnLowEvidence` in `ResearchWorkflow`, persisted in `BrowserStore`, wired into `#/settings` and `#/research` with an accessible abstention banner and Playwright E2E coverage.
+- **Scale/latency & adversarial evaluation harness (SOFTWARE-VALIDATED)**: `npm run eval:stress` (`src/retrieval/eval/stress.ts`) measuring multi-chunk ingest, heap delta, p50/p95/p99 query latency, unanswerable abstention (`100%` guarded abstention / `0%` false citations), OCR-corrupted text recall, and multi-hop dual-document recall.
+- **`Float32Array` vector storage & local retrieval telemetry (SOFTWARE-VALIDATED)**: `RetrievalPipeline` stores chunk embeddings as `Float32Array` (4 bytes/dim), and `DiagnosticsPanel` surfaces privacy-safe numeric telemetry (`queryCount`, `abstentionCount`, `zeroHitCount`, p50/p95 latency, vector bytes) with zero query/corpus leakage.
+- **Release & E2E hardening**: Windows `chrome-launcher` `EBUSY` cleanup recovery in `npm run verify:release` and expanded 8-spec real-browser Playwright E2E suite (XSS safety, empty states, `#/devices` HID simulation, abstention UI).
 
 ### v1.1.0
 

@@ -17,7 +17,7 @@ import {
 
 export const MCP_PROTOCOL_VERSION = "2024-11-05";
 export const MCP_SERVER_NAME = "autosd";
-export const MCP_SERVER_VERSION = "1.1.0";
+export const MCP_SERVER_VERSION = "1.2.0";
 
 export type JsonRpcId = string | number | null;
 
