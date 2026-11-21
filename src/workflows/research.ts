@@ -21,6 +21,8 @@ export type ResearchQuery = {
   corpusIds?: string[];
   mode?: RetrievalMode;
   answerMode?: AnswerMode;
+  abstainOnLowEvidence?: boolean;
+  minVectorScore?: number;
 };
 
 export type PersistedWorkflowState = {
@@ -243,6 +245,7 @@ export type ResearchResult = {
   answer: string;
   citations: ResearchCitation[];
   confidence: number;
+  abstained?: boolean;
 };
 
 export type ResearchSession = {
@@ -308,6 +311,8 @@ export class ResearchWorkflow {
   private mode: RetrievalMode;
   private reranker?: Reranker;
   private answerMode: AnswerMode;
+  private abstainOnLowEvidence: boolean;
+  private minVectorScore: number;
   /**
    * Tail of the serialized mutation queue. Every corpus mutation (ingest,
    * remove, provider re-index, restore) runs strictly after the previous one,
@@ -323,11 +328,15 @@ export class ResearchWorkflow {
     mode?: RetrievalMode;
     reranker?: Reranker | boolean;
     answerMode?: AnswerMode;
+    abstainOnLowEvidence?: boolean;
+    minVectorScore?: number;
   }) {
     this.di = opts?.di ?? globalContainer;
     this.topK = opts?.topK ?? 5;
     this.mode = opts?.mode ?? "hybrid";
     this.answerMode = opts?.answerMode ?? "extractive";
+    this.abstainOnLowEvidence = opts?.abstainOnLowEvidence ?? false;
+    this.minVectorScore = opts?.minVectorScore ?? 0.45;
     // Resolve provider via DI like DeviceManager does, fallback to Mock
     let provider: EmbeddingProvider;
     if (opts?.provider) provider = opts.provider;
@@ -501,32 +510,48 @@ export class ResearchWorkflow {
         answer: `No matching passages found in indexed corpus for "${query.question}".`,
         citations: [],
         confidence: 0.1,
+        ...((query.abstainOnLowEvidence ?? this.abstainOnLowEvidence) ? { abstained: true } : {}),
       };
     } else {
-      const citations: ResearchCitation[] = topK.map(r => ({
-        source: r.chunk.documentId,
-        chunkId: r.chunk.id,
-        documentId: r.chunk.documentId,
-        content: r.chunk.content.slice(0, 200),
-        score: r.score,
-      }));
-      const maxScore = Math.max(...topK.map(r => r.score), 0);
-      const confidence = Math.min(
-        0.95,
-        Math.max(0.15, maxScore > 1 ? 0.7 + maxScore / 10 : maxScore),
-      );
-      const cited = citations.map(c => c.documentId).join(", ");
-      const mode = query.answerMode ?? this.answerMode;
-      const answer =
-        mode === "template"
-          ? `Answer to "${query.question}" grounded in ${cited} (${citations.length} sources)`
-          : buildExtractiveAnswer(query.question, citations, topK);
-      result = {
-        queryId: query.id,
-        answer,
-        citations,
-        confidence,
-      };
+      const shouldAbstain = query.abstainOnLowEvidence ?? this.abstainOnLowEvidence;
+      const minVec = query.minVectorScore ?? this.minVectorScore;
+      const hasLexicalHit = topK.some(r => Number(r.details?.bm25Score ?? 0) > 0);
+      const maxVec = Math.max(...topK.map(r => Number(r.details?.vectorScore ?? 0)), 0);
+      if (shouldAbstain && !hasLexicalHit && maxVec < minVec) {
+        result = {
+          queryId: query.id,
+          answer: `Insufficient evidence in indexed corpus to answer "${query.question}".`,
+          citations: [],
+          confidence: 0,
+          abstained: true,
+        };
+      } else {
+        const citations: ResearchCitation[] = topK.map(r => ({
+          source: r.chunk.documentId,
+          chunkId: r.chunk.id,
+          documentId: r.chunk.documentId,
+          content: r.chunk.content.slice(0, 200),
+          score: r.score,
+        }));
+        const maxScore = Math.max(...topK.map(r => r.score), 0);
+        const confidence = Math.min(
+          0.95,
+          Math.max(0.15, maxScore > 1 ? 0.7 + maxScore / 10 : maxScore),
+        );
+        const cited = citations.map(c => c.documentId).join(", ");
+        const mode = query.answerMode ?? this.answerMode;
+        const answer =
+          mode === "template"
+            ? `Answer to "${query.question}" grounded in ${cited} (${citations.length} sources)`
+            : buildExtractiveAnswer(query.question, citations, topK);
+        result = {
+          queryId: query.id,
+          answer,
+          citations,
+          confidence,
+          ...(shouldAbstain ? { abstained: false } : {}),
+        };
+      }
     }
 
     const session: ResearchSession = {

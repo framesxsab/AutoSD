@@ -42,6 +42,7 @@
     "evaluate:gate": "node scripts/check-evaluation-baseline.mjs",
     "eval:quality": "node scripts/run-quality-eval.mjs",
     "eval:quality:gate": "node scripts/check-quality-baseline.mjs",
+    "eval:stress": "node scripts/run-stress-eval.mjs",
     "test:watch": "vitest",
     "test:report": "vitest run --coverage=false --reporter=default --reporter=json --outputFile=test-results.json",
     "test:gate": "node scripts/check-suite-counts.mjs test-results.json",
