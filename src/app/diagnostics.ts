@@ -58,6 +58,16 @@ export type EnvironmentDiagnostics = {
   userAgent: string | null;
 };
 
+export type RetrievalDiagnostics = {
+  queryCount: number;
+  abstentionCount: number;
+  zeroHitCount: number;
+  p50LatencyMs: number;
+  p95LatencyMs: number;
+  vectorStorage: "float32";
+  vectorBytes: number;
+};
+
 export type DiagnosticsReport = {
   version: string;
   build: string;
@@ -67,6 +77,7 @@ export type DiagnosticsReport = {
   watcher: WatcherDiagnostics;
   indexing: IndexingDiagnostics;
   services: ServiceDiagnostics;
+  retrieval: RetrievalDiagnostics;
   environment: EnvironmentDiagnostics;
   generatedAt: string;
 };
@@ -172,6 +183,35 @@ function collectIndexing(liveSync?: LiveSync | null): IndexingDiagnostics {
   }
 }
 
+function collectRetrieval(workflow?: ResearchWorkflow | null): RetrievalDiagnostics {
+  const empty: RetrievalDiagnostics = {
+    queryCount: 0,
+    abstentionCount: 0,
+    zeroHitCount: 0,
+    p50LatencyMs: 0,
+    p95LatencyMs: 0,
+    vectorStorage: "float32",
+    vectorBytes: 0,
+  };
+  if (!workflow) return empty;
+  try {
+    const telemetry = typeof workflow.getTelemetry === "function" ? workflow.getTelemetry() : null;
+    const vecStats =
+      typeof workflow.getVectorStats === "function" ? workflow.getVectorStats() : null;
+    return {
+      queryCount: telemetry?.queryCount ?? 0,
+      abstentionCount: telemetry?.abstentionCount ?? 0,
+      zeroHitCount: telemetry?.zeroHitCount ?? 0,
+      p50LatencyMs: telemetry?.p50LatencyMs ?? 0,
+      p95LatencyMs: telemetry?.p95LatencyMs ?? 0,
+      vectorStorage: vecStats?.storage ?? "float32",
+      vectorBytes: vecStats?.bytes ?? 0,
+    };
+  } catch {
+    return empty;
+  }
+}
+
 function collectEnvironment(): EnvironmentDiagnostics {
   let platform = "unknown";
   let userAgent: string | null = null;
@@ -233,6 +273,7 @@ export function collectDiagnostics(input: DiagnosticsInput = {}): DiagnosticsRep
       hidAvailable: isHidAvailable(input.deviceManager),
       openAIConfigured: isOpenAIConfigured(provider),
     },
+    retrieval: collectRetrieval(input.workflow),
     environment: collectEnvironment(),
     generatedAt: new Date().toISOString(),
   }) as DiagnosticsReport;

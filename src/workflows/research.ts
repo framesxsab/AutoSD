@@ -3,7 +3,11 @@
  * Additive: preserves old run({id,question,corpusIds}) signature.
  * New: ingest, searchable corpus, citations, confidence, reproducible session, export.
  */
-import { RetrievalPipeline, type RetrievalMode } from "../retrieval/pipeline.js";
+import {
+  RetrievalPipeline,
+  type RetrievalMode,
+  type VectorStorageStats,
+} from "../retrieval/pipeline.js";
 import { SnapshotIndex, hashDocument } from "../retrieval/snapshot.js";
 import { MockEmbeddingProvider } from "../retrieval/providers/MockEmbeddingProvider.js";
 import { LexicalReranker, type Reranker } from "../retrieval/reranker.js";
@@ -264,8 +268,23 @@ export type RetrievalSessionResult = {
   source: string;
 };
 
+export type RetrievalTelemetry = {
+  readonly queryCount: number;
+  readonly abstentionCount: number;
+  readonly zeroHitCount: number;
+  readonly p50LatencyMs: number;
+  readonly p95LatencyMs: number;
+};
+
 export const EMBEDDING_TOKEN = "embedding:provider";
 export const MAX_SESSIONS = 100;
+const MAX_LATENCY_SAMPLES = 200;
+
+function computePercentile(sorted: readonly number[], p: number): number {
+  if (sorted.length === 0) return 0;
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  return Math.round(sorted[idx] * 100) / 100;
+}
 
 export function isValidRestoredSession(s: unknown): s is ResearchSession {
   if (!s || typeof s !== "object") return false;
@@ -313,6 +332,10 @@ export class ResearchWorkflow {
   private answerMode: AnswerMode;
   private abstainOnLowEvidence: boolean;
   private minVectorScore: number;
+  private telemetryQueryCount = 0;
+  private telemetryAbstentionCount = 0;
+  private telemetryZeroHitCount = 0;
+  private telemetryLatenciesMs: number[] = [];
   /**
    * Tail of the serialized mutation queue. Every corpus mutation (ingest,
    * remove, provider re-index, restore) runs strictly after the previous one,
@@ -357,6 +380,31 @@ export class ResearchWorkflow {
 
   getProvider(): EmbeddingProvider {
     return this.provider;
+  }
+
+  getVectorStats(): VectorStorageStats {
+    if (typeof this.pipeline.getVectorStats === "function") {
+      return this.pipeline.getVectorStats();
+    }
+    return { count: 0, dimensions: 0, bytes: 0, storage: "float32" };
+  }
+
+  getTelemetry(): RetrievalTelemetry {
+    const sorted = [...this.telemetryLatenciesMs].sort((a, b) => a - b);
+    return {
+      queryCount: this.telemetryQueryCount,
+      abstentionCount: this.telemetryAbstentionCount,
+      zeroHitCount: this.telemetryZeroHitCount,
+      p50LatencyMs: computePercentile(sorted, 50),
+      p95LatencyMs: computePercentile(sorted, 95),
+    };
+  }
+
+  resetTelemetry(): void {
+    this.telemetryQueryCount = 0;
+    this.telemetryAbstentionCount = 0;
+    this.telemetryZeroHitCount = 0;
+    this.telemetryLatenciesMs = [];
   }
 
   getRetrievalMode(): RetrievalMode {
@@ -483,6 +531,7 @@ export class ResearchWorkflow {
   async run(query: ResearchQuery): Promise<ResearchResult> {
     // Reads never interleave with a half-applied mutation.
     await this.mutationTail;
+    const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
     const topK = await this.pipeline.search(query.question, {
       topK: this.topK,
       documentIds: query.corpusIds,
@@ -552,6 +601,18 @@ export class ResearchWorkflow {
           ...(shouldAbstain ? { abstained: false } : {}),
         };
       }
+    }
+
+    const elapsedMs = (typeof performance !== "undefined" ? performance.now() : Date.now()) - t0;
+    this.telemetryQueryCount += 1;
+    if (result.abstained) {
+      this.telemetryAbstentionCount += 1;
+    } else if (result.citations.length === 0) {
+      this.telemetryZeroHitCount += 1;
+    }
+    this.telemetryLatenciesMs.push(Math.max(0, elapsedMs));
+    if (this.telemetryLatenciesMs.length > MAX_LATENCY_SAMPLES) {
+      this.telemetryLatenciesMs.shift();
     }
 
     const session: ResearchSession = {

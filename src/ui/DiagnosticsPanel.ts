@@ -152,6 +152,14 @@ export class DiagnosticsPanel {
           r.services.openAIConfigured ? "configured" : "not configured"
         }`,
       ],
+      ...(r.retrieval
+        ? [
+            [
+              "Retrieval telemetry",
+              `${r.retrieval.queryCount} queries · ${r.retrieval.abstentionCount} abstained · ${r.retrieval.zeroHitCount} zero-hit · p50 ${r.retrieval.p50LatencyMs}ms · p95 ${r.retrieval.p95LatencyMs}ms · ${r.retrieval.vectorBytes} B (${r.retrieval.vectorStorage})`,
+            ] as [string, string],
+          ]
+        : []),
     ];
     for (const [term, desc] of rows) {
       const dt = document.createElement("dt");

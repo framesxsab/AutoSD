@@ -2,10 +2,17 @@ import type { Chunk, Document, RetrievalResult } from "./types.js";
 import { chunkDocument } from "./chunker.js";
 import { BM25Index } from "./bm25.js";
 import type { EmbeddingProvider } from "./embedder.js";
-import { cosineSimilarity } from "./embedder.js";
+import { cosineSimilarity, toFloat32Vector } from "./embedder.js";
 import type { Reranker } from "./reranker.js";
 
 export type RetrievalMode = "hybrid" | "bm25" | "vector";
+
+export type VectorStorageStats = {
+  readonly count: number;
+  readonly dimensions: number;
+  readonly bytes: number;
+  readonly storage: "float32";
+};
 
 export type PipelineOptions = {
   readonly chunkSize?: number;
@@ -27,7 +34,7 @@ export type SearchOptions = {
 
 export class RetrievalPipeline {
   private chunks: Chunk[] = [];
-  private chunkEmbeddings = new Map<string, number[]>();
+  private chunkEmbeddings = new Map<string, Float32Array>();
   private bm25: BM25Index;
   private reranker?: Reranker;
   /** Bumped by clear(); lets in-flight ingests detect they are stale. */
@@ -92,6 +99,21 @@ export class RetrievalPipeline {
     return { ...this.opts };
   }
 
+  getVectorStats(): VectorStorageStats {
+    let bytes = 0;
+    let dimensions = 0;
+    for (const vec of this.chunkEmbeddings.values()) {
+      bytes += vec.byteLength;
+      if (dimensions === 0) dimensions = vec.length;
+    }
+    return {
+      count: this.chunkEmbeddings.size,
+      dimensions,
+      bytes,
+      storage: "float32",
+    };
+  }
+
   /**
    * Chunk + embed first, then commit synchronously. The commit step replaces
    * any existing chunks for the same document ids in one go, so overlapping
@@ -111,14 +133,15 @@ export class RetrievalPipeline {
       );
     }
 
-    const vectors: number[][] = [];
+    const vectors: Float32Array[] = [];
     if (newChunks.length > 0) {
       const batch =
         typeof this.provider.embedMany === "function"
           ? await this.provider.embedMany(newChunks.map(c => c.content))
           : await Promise.all(newChunks.map(c => this.provider.embed(c.content)));
       for (let i = 0; i < newChunks.length; i++) {
-        vectors.push(batch[i] ?? (await this.provider.embed(newChunks[i].content)));
+        const raw = batch[i] ?? (await this.provider.embed(newChunks[i].content));
+        vectors.push(toFloat32Vector(raw));
       }
     }
 
@@ -162,7 +185,7 @@ export class RetrievalPipeline {
       ? this.chunks.filter(c => docFilter.has(c.documentId))
       : this.chunks;
     if (candidates.length === 0) return [];
-    const qVec = await this.provider.embed(query);
+    const qVec = toFloat32Vector(await this.provider.embed(query));
     const scored: RetrievalResult[] = [];
     for (const c of candidates) {
       const vec = this.chunkEmbeddings.get(c.id);
