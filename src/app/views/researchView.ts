@@ -1,5 +1,6 @@
 import { createCitationList } from "../../ui/CitationView.js";
 import type { RetrievalMode } from "../../retrieval/pipeline.js";
+import { loadPreferences, savePreferences } from "../BrowserStore.js";
 import type { ViewContext, RouterView } from "../router.js";
 import { withHeading } from "./shared.js";
 
@@ -43,7 +44,25 @@ export function createResearchView(ctx: ViewContext): RouterView {
     modeSelect.appendChild(opt);
   }
 
-  optionsBar.append(scopeSelect, modeSelect);
+  const abstainLabel = document.createElement("label");
+  abstainLabel.style.display = "inline-flex";
+  abstainLabel.style.alignItems = "center";
+  abstainLabel.style.gap = "6px";
+  const abstainCheck = document.createElement("input");
+  abstainCheck.type = "checkbox";
+  abstainCheck.dataset.autosdAbstainToggle = "true";
+  abstainCheck.setAttribute("aria-label", "Abstain on low evidence");
+  abstainCheck.addEventListener("change", () => {
+    savePreferences({ abstainOnLowEvidence: abstainCheck.checked });
+    ctx.announce(
+      abstainCheck.checked
+        ? "Low-evidence abstention guard enabled"
+        : "Low-evidence abstention guard disabled",
+    );
+  });
+  abstainLabel.append(abstainCheck, document.createTextNode("Abstain on low evidence"));
+
+  optionsBar.append(scopeSelect, modeSelect, abstainLabel);
   root.appendChild(optionsBar);
 
   const results = document.createElement("section");
@@ -96,10 +115,32 @@ export function createResearchView(ctx: ViewContext): RouterView {
 
     const corpusIds = scopeSelect.value !== "all" ? [scopeSelect.value] : undefined;
     const mode = modeSelect.value !== "default" ? (modeSelect.value as RetrievalMode) : undefined;
+    const abstainOnLowEvidence = abstainCheck.checked;
 
     void ctx.workflow
-      .run({ id: `research-${Date.now()}`, question, corpusIds, mode })
+      .run({
+        id: `research-${Date.now()}`,
+        question,
+        corpusIds,
+        mode,
+        abstainOnLowEvidence,
+      })
       .then(res => {
+        if (res.abstained) {
+          const banner = document.createElement("div");
+          banner.className = "autosd-abstention-banner";
+          banner.dataset.autosdAbstention = "true";
+          banner.setAttribute("role", "status");
+          banner.textContent =
+            "Abstained — insufficient grounded evidence in the indexed corpus (0 citations).";
+          const answer = document.createElement("p");
+          answer.className = "autosd-answer-card";
+          answer.textContent = res.answer;
+          results.replaceChildren(banner, answer);
+          ctx.onWorkspaceMutated?.();
+          ctx.announce("Research abstained: insufficient grounded evidence in indexed corpus");
+          return;
+        }
         const badge = document.createElement("p");
         badge.className = "autosd-confidence-badge";
         badge.setAttribute("role", "status");
@@ -138,6 +179,7 @@ export function createResearchView(ctx: ViewContext): RouterView {
     root,
     mount(host) {
       refreshScope();
+      abstainCheck.checked = Boolean(loadPreferences().abstainOnLowEvidence);
       host.appendChild(root);
       if (ctx.liveSync) {
         unsubscribeSync?.();

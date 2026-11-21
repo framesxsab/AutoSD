@@ -20,6 +20,7 @@ export type UserPreferences = {
   embeddingProvider?: EmbeddingProviderPreference;
   retrievalMode?: RetrievalMode;
   rerankerEnabled?: boolean;
+  abstainOnLowEvidence?: boolean;
   tactileMode?: TactileMode;
   brailleGrade?: BrailleGrade;
   cellPaginationEnabled?: boolean;
@@ -219,6 +220,9 @@ export function loadPreferences(): UserPreferences {
     }
     if (typeof rec.rerankerEnabled === "boolean") {
       prefs.rerankerEnabled = rec.rerankerEnabled;
+    }
+    if (typeof rec.abstainOnLowEvidence === "boolean") {
+      prefs.abstainOnLowEvidence = rec.abstainOnLowEvidence;
     }
     if (rec.tactileMode === "braille" || rec.tactileMode === "dots") {
       prefs.tactileMode = rec.tactileMode;

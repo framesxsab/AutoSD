@@ -421,6 +421,10 @@ function createSettingsView(ctx: ViewContext): RouterView {
   rerankCheck.type = "checkbox";
   rerankCheck.setAttribute("aria-label", "Enable lexical reranking");
 
+  const abstainCheck = document.createElement("input");
+  abstainCheck.type = "checkbox";
+  abstainCheck.setAttribute("aria-label", "Abstain on low evidence");
+
   const tactileSelect = document.createElement("select");
   tactileSelect.setAttribute("aria-label", "Tactile encoding mode");
   for (const [val, label] of [
@@ -464,6 +468,7 @@ function createSettingsView(ctx: ViewContext): RouterView {
     createFieldRow("Embedding provider", providerSelect),
     createFieldRow("Retrieval mode", modeSelect),
     createFieldRow("Lexical reranking", rerankCheck),
+    createFieldRow("Abstain on low evidence", abstainCheck),
     createFieldRow("Tactile encoding", tactileSelect),
     createFieldRow("Braille grade", gradeSelect),
     createFieldRow("Display width", cellSelect),
@@ -655,6 +660,7 @@ function createSettingsView(ctx: ViewContext): RouterView {
     gradeSelect.value = String(prefs.brailleGrade ?? 1);
     cellSelect.value = String(prefs.displayCellCount ?? 40);
     cellPaginateCheck.checked = Boolean(prefs.cellPaginationEnabled);
+    abstainCheck.checked = Boolean(prefs.abstainOnLowEvidence);
     renderPlugins();
   };
 
@@ -727,6 +733,16 @@ function createSettingsView(ctx: ViewContext): RouterView {
     const msg = enabled
       ? "Cell-aware Reader pagination enabled"
       : "Cell-aware Reader pagination disabled";
+    prefsStatus.textContent = msg;
+    ctx.announce(msg);
+  });
+
+  abstainCheck.addEventListener("change", () => {
+    const enabled = abstainCheck.checked;
+    savePreferences({ abstainOnLowEvidence: enabled });
+    const msg = enabled
+      ? "Low-evidence abstention guard enabled"
+      : "Low-evidence abstention guard disabled";
     prefsStatus.textContent = msg;
     ctx.announce(msg);
   });

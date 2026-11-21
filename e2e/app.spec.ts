@@ -232,4 +232,34 @@ test.describe("AutoSD real-browser E2E suite (M6)", () => {
     await expect(logList).toContainText("routing cell 1");
     expect(pageErrors).toEqual([]);
   });
+
+  test("Settings low-evidence abstention guard persists across reload and shows abstention banner on OOD Research query", async ({
+    page,
+  }) => {
+    const pageErrors: string[] = [];
+    page.on("pageerror", err => pageErrors.push(err.message));
+
+    await page.goto("/#/workspace");
+    await page.getByRole("button", { name: "Load sample corpus" }).click();
+
+    await page.goto("/#/settings");
+    await page.getByLabel("Abstain on low evidence").check();
+    await page.reload();
+    await expect(page.getByLabel("Abstain on low evidence")).toBeChecked();
+
+    await page
+      .getByRole("navigation", { name: "Primary" })
+      .getByText("Research", { exact: true })
+      .click();
+    await expect(page.locator("[data-autosd-abstain-toggle]")).toBeChecked();
+
+    await page
+      .getByLabel("Research question")
+      .fill("sourdough starter hydration fermentation temperature");
+    await page.getByRole("button", { name: "Run research" }).click();
+
+    await expect(page.locator("[data-autosd-abstention]")).toBeVisible();
+    await expect(page.locator("[data-autosd-abstention]")).toContainText("Abstained");
+    expect(pageErrors).toEqual([]);
+  });
 });
