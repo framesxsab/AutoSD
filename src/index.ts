@@ -33,3 +33,4 @@ export * from "./app/LiveSync.js";
 export * from "./app/Workspace.js";
 export * from "./app/diagnostics.js";
 export * from "./app/OnboardingStore.js";
+export * from "./mcp/server.js";

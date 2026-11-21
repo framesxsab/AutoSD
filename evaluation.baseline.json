@@ -1,15 +1,15 @@
 {
   "baseline": "autosd-evaluation-baseline",
-  "baselineVersion": 10,
+  "baselineVersion": 11,
   "taskSetVersion": 2,
-  "source": "verified local run (Windows, Node 22) after GFI-3 hardness (11 tasks); suiteCounts ratcheted 49/275 -> 52/290 in v1.1 M1/M2 -> 53/296 after UI/design alignment suite -> 55/308 after v1.2 phase -> 56/322 after whitebox/blackbox & hardening -> 61/358 after Slice 1-3 & Braille Iterations 3-4 -> 61/360 after M3 ONNX local provider tests -> 62/363 after scale/latency & adversarial/abstention evals; see docs/BASELINE_MIGRATION.md",
+  "source": "verified local run (Windows, Node 22) after GFI-3 hardness (11 tasks); suiteCounts ratcheted 49/275 -> 52/290 in v1.1 M1/M2 -> 53/296 after UI/design alignment suite -> 55/308 after v1.2 phase -> 56/322 after whitebox/blackbox & hardening -> 61/358 after Slice 1-3 & Braille Iterations 3-4 -> 61/360 after M3 ONNX local provider tests -> 62/363 after scale/latency & adversarial/abstention evals -> 63/368 after zero-dependency stdio MCP server; see docs/BASELINE_MIGRATION.md",
   "schemaId": "autosd-evaluation",
   "schemaVersion": 1,
   "appVersion": "1.1.0",
   "evaluationKind": "AUTOMATED",
   "suiteCounts": {
-    "testFiles": 62,
-    "tests": 363
+    "testFiles": 63,
+    "tests": 368
   },
   "requiredTasks": [
     {
